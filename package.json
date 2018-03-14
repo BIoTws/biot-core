@@ -1,0 +1,28 @@
+{
+  "name": "biot-core",
+  "version": "0.0.1",
+  "description": "",
+  "main": "core.js",
+  "scripts": {
+    "docs": "jsdoc core.js"
+  },
+  "keywords": [
+    "iot",
+    "byteball",
+    "dag",
+    "wallet",
+    "decentralized"
+  ],
+  "author": "xJeneK",
+  "license": "MIT",
+  "dependencies": {
+    "async": "^2.6.0",
+    "bitcore-mnemonic": "~1.0.0",
+    "byteballcore": "git+https://github.com/byteball/byteballcore.git",
+    "moment": "^2.20.1",
+    "secp256k1": "^3.5.0"
+  },
+  "devDependencies": {
+    "jsdoc": "^3.5.5"
+  }
+}
