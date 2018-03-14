@@ -114,3 +114,4 @@ crashlytics-build.properties
 fabric.properties
 
 *.jse
+package-lock.json

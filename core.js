@@ -16,6 +16,7 @@ const libKeys = require('./lib/keys');
 const libWallet = require('./lib/wallet');
 const libAddress = require('./lib/address');
 const libTransactions = require('./lib/transactions');
+const libCorrespondents = require('./lib/correspondents');
 
 const appDataDir = desktopApp.getAppDataDir();
 
@@ -37,7 +38,7 @@ function replaceConsoleLog() {
 
 /**
  @async
- @description Initialize core
+ @description Core initializing
  @param {string} passphrase Passphrase to unlock your account
  @return {string} Status
  @example
@@ -111,7 +112,7 @@ async function getAddressesInWallet(walletId) {
 
 /**
  @async
- @description Create new wallet
+ @description Creating new wallet
  @return {string} walletId
  @example
  await core.createNewWallet()
@@ -123,7 +124,7 @@ async function createNewWallet() {
 }
 
 /**
- @description Create new address
+ @description Creating new address
  @param {string} walletId Wallet id
  @return {Promise.<string>} Address
  @example
@@ -165,7 +166,7 @@ async function getAddressBalance(address) {
 }
 
 /**
- @description Send text message to device address
+ @description Sending text message to device address
  @param {string} device_address Device address
  @param {string} text Message text
  @example
@@ -201,7 +202,7 @@ function sendPaymentFromWallet(options) {
 }
 
 /**
- @description Get list of transactions by wallet.
+ @description Getting list of transactions by wallet.
  @param {string} walletId Wallet id
  @return {Promise.<Object>} history
  @example
@@ -214,7 +215,7 @@ function getListTransactionsForWallet(walletId) {
 }
 
 /**
- @description Get list of transactions by address.
+ @description Getting list of transactions by address.
  @param {string} address Byteball address
  @return {Promise.<Object>} history
  @example
@@ -235,7 +236,7 @@ function getListTransactionsForAddress(address) {
 
 /**
  @async
- @description Get address info
+ @description Getting address info
  @param {string} address Byteball address
  @return {AddressInfo} address info
  @example
@@ -252,7 +253,7 @@ function myAddressInfo(address) {
  */
 
 /**
- @description Sign device private key
+ @description Signing device private key
  @param {string} hash Hash string
  @return {Sign} sign object
  @example
@@ -267,7 +268,7 @@ function signDevicePrivateKey(hash) {
 
 
 /**
- @description Sign with address (see: myAddressInfo)
+ @description Signing with address (watch: myAddressInfo)
  @param {number} account
  @param {number} is_change
  @param {number} address_index
@@ -285,16 +286,46 @@ function signWithAddress(account, is_change, address_index, hash) {
 }
 
 /**
- @description Verify sign
+ @description Sign verification
  @param {string} hash Hash string
  @param {string} b64_sig Sign.sign
  @param {string} b64_pub_key Sign.pub_b64
- @return {boolean} Verification done?
+ @return {boolean} Verification result
  @example
  core.verifySign('IZHG7LKW2FJ2KAUHL4RRPY3JG2HNVNPD', '/J6Gv9aT8KSgEP2TwmNoQ2W/JmZXYaXBLt4zBE8Po5Vm8TOX+fu53Y7DSYtuH/61EgR7WP5Spk76J8gFTCmPpg==', 'A4QdpqFIqVbyCXgbuzlHEMl+1osh2hGC3oVRzHU1V5V0');
  */
 function verifySign(hash, b64_sig, b64_pub_key) {
 	return ecdsaSig.verify(hash, b64_sig, b64_pub_key);
+}
+
+/**
+ @description Add a correspondent
+ @param {string} code Pairing code
+ @example
+ await core.addCorrespondent('ApM6ZzpMhnK87Qqz4LhkIHTxGA79VVTVqb1PmtrAzOzo@byteball.org/bb-test#O3IZDFeH4SR0');
+ */
+function addCorrespondent(code) {
+	return libCorrespondents.add(code);
+}
+
+/**
+ @description Remove a correspondent
+ @param {string} device_address Device address
+ @example
+ await core.removeCorrespondent('0WI73XY6WPR46D4ZKEQEFFQSSPBZMUOVD');
+ */
+function removeCorrespondent(device_address) {
+	return libCorrespondents.remove(device_address);
+}
+
+/**
+ @description List of correspondents
+ @return {Array.<Object>} list
+ @example
+ await core.listCorrespondents()
+ */
+function listCorrespondents(){
+	return libCorrespondents.list();
 }
 
 
@@ -312,3 +343,6 @@ exports.myAddressInfo = myAddressInfo;
 exports.signDevicePrivateKey = signDevicePrivateKey;
 exports.signWithAddress = signWithAddress;
 exports.verifySign = verifySign;
+exports.addCorrespondent = addCorrespondent;
+exports.removeCorrespondent = removeCorrespondent;
+exports.listCorrespondents = listCorrespondents;
