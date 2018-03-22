@@ -15,7 +15,7 @@ async function start() {
 		peerDeviceAddress: '0WI73XY6WPR46D4ZKEQEFFQSSPBZMUOVD',
 		peerAmount: 10000,
 		myAmount: 5000,
-	 secrets: {'pass1': 'testpwd'}
+		secrets: {'r.2.0.1': 'testpwd', 'r.2.1.1': 'testpwd'}
 	});
 	console.error('shared_address: ', channel.shared_address);
 	console.error('unit: ', channel.unit);
@@ -28,7 +28,7 @@ async function start() {
 	// -------
 
 	// console.error('unit', await core.takeMoneyFromContractUsingSecrets(wallets[0], 1000,
-	// 	'4ICGDPIPMIXAJKD4RRKNMST6PJ4WMIBJ', addresses[0], {'pass1': 'testpwd'}));
+	// 	'ETLBKBLREQ6C3LSVDUEOGLPWJ3Z4MCNB', addresses[0], {'r.2.0.1': 'testpwd'}));
 
 
 	return 'ok';
