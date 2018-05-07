@@ -9,7 +9,7 @@ async function start() {
 	let signDevice = core.signDevicePrivateKey(hash);
 	console.error(`verify sign "${signDevice.sign}" device: ${core.verifySign(hash, signDevice.sign, signDevice.pub_b64)}`);
 
-	let wallets = await core.getWallets();
+	let wallets = await core.getMyDeviceWallets();
 	let addresses = await core.getAddressesInWallet(wallets[0]);
 	let addressInfo = await core.myAddressInfo(addresses[0]);
 

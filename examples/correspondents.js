@@ -12,7 +12,7 @@ async function start() {
 		console.error('text', from_address, ' - ', text)
 	});
 
-	await core.addCorrespondent('ApM6ZzpMhnK87Qqz4LhkIHTxGA79VVTVqb1PmtrAzOzo@byteball.org/bb-test#jeYUzsHcWw7a');
+	// await core.addCorrespondent('A1sgbdTdc0FDxI8ZS5cwHIK1iPVk/QXev8ncHmD4BWYi@byteball.org/bb-test#AnKTBIDZWBWf');
 	//await core.removeCorrespondent('0WI73XY6WPR46D4ZKEQEFFQSSPBZMUOVD');
 	console.error(await core.listCorrespondents());
 

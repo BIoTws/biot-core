@@ -17,10 +17,15 @@ const libWallet = require('./lib/wallet');
 const libAddress = require('./lib/address');
 const libTransactions = require('./lib/transactions');
 const libCorrespondents = require('./lib/correspondents');
+const libSqliteMigrations = require('./lib/sqlite_migrations');
 
 const appDataDir = desktopApp.getAppDataDir();
 
+const protocolVersion = '0.1';
+
 let xPrivKey;
+
+process.on('unhandledRejection', up => { throw up; });
 
 function replaceConsoleLog() {
 	let log_filename = conf.LOG_FILENAME || (appDataDir + '/log.txt');
@@ -52,7 +57,7 @@ exports.init = async (passphrase) => {
 
 	let mnemonic = new Mnemonic(keys.mnemonic_phrase);
 	xPrivKey = mnemonic.toHDPrivateKey(passphrase);
-	libTransactions.setXPrivKey(xPrivKey);
+	libKeys.setXPrivKey(xPrivKey);
 
 	let devicePrivKey = xPrivKey.derive("m/1'").privateKey.bn.toBuffer({size: 32});
 
@@ -79,8 +84,12 @@ exports.init = async (passphrase) => {
 		let light_wallet = require('byteballcore/light_wallet');
 		light_wallet.setLightVendorHost(conf.hub);
 	}
+	await libSqliteMigrations.migrateDb();
 	eventBus.emit('headless_wallet_ready');
-	replaceConsoleLog();
+
+	if (!process.env.DEBUG) {
+		replaceConsoleLog();
+	}
 
 	return 'Initialized successfully';
 };
@@ -94,6 +103,13 @@ exports.init = async (passphrase) => {
  */
 async function getWallets() {
 	let rows = await toEs6.dbQuery("SELECT wallet FROM wallets");
+	return rows.map(row => row.wallet);
+}
+
+async function getMyDeviceWallets() {
+	let device = require('byteballcore/device')
+	let rows = await toEs6.dbQuery("SELECT wallet FROM wallets JOIN wallet_signing_paths USING(wallet) WHERE device_address = ?",
+		[device.getMyDeviceAddress()]);
 	return rows.map(row => row.wallet);
 }
 
@@ -175,6 +191,20 @@ async function getAddressBalance(address) {
 function sendTextMessageToDevice(device_address, text) {
 	let device = require('byteballcore/device');
 	device.sendMessageToDevice(device_address, 'text', text);
+}
+
+/**
+ @description Sending tech message to device address
+ @param {string} device_address Device address
+ @param {object} object Object
+ @example
+ core.sendTechMessageToDevice('0PZT5VOY5AINZKW2SJ3Z7O4IDQNKPV364', {version: '0.1'})
+ */
+function sendTechMessageToDevice(device_address, object) {
+	let device = require('byteballcore/device');
+	object.version = protocolVersion;
+	object.app = 'BIoT';
+	device.sendMessageToDevice(device_address, 'text', JSON.stringify(object));
 }
 
 /**
@@ -343,11 +373,13 @@ function takeMoneyFromContractUsingSecrets(walletId, amount, shared_address, to_
 
 exports.createNewWallet = createNewWallet;
 exports.getWallets = getWallets;
+exports.getMyDeviceWallets = getMyDeviceWallets;
 exports.getAddressesInWallet = getAddressesInWallet;
 exports.createNewAddress = createNewAddress;
 exports.getWalletBalance = getWalletBalance;
 exports.getAddressBalance = getAddressBalance;
 exports.sendTextMessageToDevice = sendTextMessageToDevice;
+exports.sendTechMessageToDevice = sendTechMessageToDevice;
 exports.sendPaymentFromWallet = sendPaymentFromWallet;
 exports.getListTransactionsForAddress = getListTransactionsForAddress;
 exports.getListTransactionsForWallet = getListTransactionsForWallet;

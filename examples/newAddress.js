@@ -3,7 +3,7 @@ const core = require('../core');
 async function start() {
 	await core.init('test');
 
-	let wallets = await core.getWallets();
+	let wallets = await core.getMyDeviceWallets();
 	console.error('wallets', wallets);
 
 	let addresses = await core.getAddressesInWallet(wallets[0]);
