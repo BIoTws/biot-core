@@ -14,7 +14,7 @@ async function start() {
 	let list = await channelsManager.list();
 	// console.error('list', list);
 	if (list.length) {
-		channel = channelsManager.recoveryChannel(list[1]);
+		channel = channelsManager.recoveryChannel(list[0]);
 		channel.events.on('error', error => {
 			console.error('channelError', channel.id, error);
 		});
@@ -26,13 +26,9 @@ async function start() {
 			console.error('info', channel.info());
 		});
 		await channel.init();
-		setTimeout(async () => {
-			console.error('waitingMCI');
-			await channel.waitingMCI('QEXHFtMOE0vh6XFtt22Is//rjq9CCYqWvB5ST49MxXI=');
-		}, 10000);
 		// console.error('transfer', await channel.transfer(1000));
-		// console.error('transfer', await channel.transfer(500));
-		// console.error('close', await channel.mutualClosure());
+		// console.error('transfer', await channel.transfer(5));
+		// console.error('close', await channel.closeNow());
 		console.error('info', channel.info());
 		// console.error('channel', channel);
 	} else {
@@ -43,7 +39,7 @@ async function start() {
 		channel.events.on('start', async () => {
 			console.error('channel start. t.js', channel.id);
 			console.error('info', channel.info());
-			// console.error('transfer', await channel.transfer(1000));
+			console.error('transfer', await channel.transfer(1000));
 			// console.error('transfer', await channel.transfer(1005));
 			// console.error('close', await channel.mutualClosure());
 		});
