@@ -8,18 +8,18 @@ async function start() {
 	let channel;
 	let list = await channelsManager.list();
 	console.error('list', list);
-	// if (list.length) {
-	// 	console.error('start recovery');
-	// 	channel = channelsManager.recoveryChannel(list[0]);
-	// 	channel.events.on('start', () => {
-	// 		console.error('channel start. t.js', channel.id);
-	// 	});
-	// 	await channel.init();
-	// 	console.error('init');
-	// 	await channel.approve();
-	// 	console.error('channel', channel);
-	// 	console.error(channel.info());
-	// }
+	if (list.length) {
+		console.error('start recovery');
+		channel = channelsManager.recoveryChannel(list[0]);
+		channel.events.on('start', () => {
+			console.error('channel start. t.js', channel.id);
+		});
+		await channel.init();
+		console.error('init');
+		await channel.approve();
+		console.error('channel', channel);
+		console.error(channel.info());
+	}
 
 	channelsManager.events.on('newChannel', async (objInfo) => {
 		console.error('new Channel: ', objInfo);
@@ -27,10 +27,13 @@ async function start() {
 		channel.events.on('start', () => {
 			console.error('channel start. t.js', channel.id);
 		});
+		channel.events.on('changed_step', (step) => {
+			console.error('changed_step: ', step);
+		});
 		await channel.init();
 		await channel.approve();
 		console.error(channel.info());
-	})
+	});
 }
 
 start().catch(console.error);
