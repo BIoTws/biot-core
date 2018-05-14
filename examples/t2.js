@@ -14,6 +14,9 @@ async function start() {
 		channel.events.on('start', () => {
 			console.error('channel start. t.js', channel.id);
 		});
+		channel.events.on('new_transfer', (amount) => {
+			console.error('new_transfer: ', amount);
+		});
 		await channel.init();
 		console.error('init');
 		await channel.approve();
@@ -29,6 +32,9 @@ async function start() {
 		});
 		channel.events.on('changed_step', (step) => {
 			console.error('changed_step: ', step);
+		});
+		channel.events.on('new_transfer', (amount) => {
+			console.error('new_transfer: ', amount);
 		});
 		await channel.init();
 		if (channel.myAmount === 5000) {
