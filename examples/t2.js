@@ -31,7 +31,11 @@ async function start() {
 			console.error('changed_step: ', step);
 		});
 		await channel.init();
-		await channel.approve();
+		if (channel.myAmount === 5000) {
+			await channel.approve();
+		} else {
+			await channel.reject();
+		}
 		console.error(channel.info());
 	});
 }

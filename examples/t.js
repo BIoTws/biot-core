@@ -12,7 +12,6 @@ async function start() {
 	const channelsManager = new ChannelsManager(wallets[0]);
 
 	let list = await channelsManager.list();
-	// console.error('list', list);
 	if (list.length) {
 		channel = channelsManager.recoveryChannel(list[0]);
 		channel.events.on('error', error => {
@@ -22,7 +21,12 @@ async function start() {
 			console.error('channel start. t.js', channel.id);
 			console.error('info', channel.info());
 		});
+		channel.events.on('changed_step', (step) => {
+			console.error('changed_step: ', step);
+		});
 		await channel.init();
+		// console.error('transfer', await channel.transfer(500));
+		console.error(await channel.closeNow());
 		console.error('info', channel.info());
 	} else {
 		let channel = new Channel(wallets[0], myDeviceAddress, '0ER62QXE74WFU7ZVYFSJVJBLHVUPBO3Y4', null, 6000, 5000, 10);
@@ -32,8 +36,7 @@ async function start() {
 		channel.events.on('start', async () => {
 			console.error('channel start. t.js', channel.id);
 			console.error('info', channel.info());
-			console.error('transfer', await channel.transfer(1000));
-			console.error('close. waiting_stable_unit: ', await channel.closeNow());
+			// console.error('close. waiting_stable_unit: ', await channel.closeNow());
 		});
 		channel.events.on('changed_step', (step) => {
 			console.error('changed_step: ', step);
