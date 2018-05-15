@@ -200,11 +200,11 @@ function sendTextMessageToDevice(device_address, text) {
  @example
  core.sendTechMessageToDevice('0PZT5VOY5AINZKW2SJ3Z7O4IDQNKPV364', {version: '0.1'})
  */
-function sendTechMessageToDevice(device_address, object) {
+function sendTechMessageToDevice(device_address, object, callback) {
 	let device = require('byteballcore/device');
 	object.version = protocolVersion;
 	object.app = 'BIoT';
-	device.sendMessageToDevice(device_address, 'text', JSON.stringify(object));
+	device.sendMessageToDevice(device_address, 'text', JSON.stringify(object), callback);
 }
 
 /**
