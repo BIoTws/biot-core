@@ -231,6 +231,10 @@ function sendPaymentFromWallet(options) {
 	return libTransactions.sendPaymentFromWallet(options);
 }
 
+function sendPaymentFromWalletUseUnstableUnits(options) {
+	return libTransactions.sendPaymentFromWalletUseUnstableUnits(options);
+}
+
 /**
  @description Getting list of transactions by wallet.
  @param {string} walletId Wallet id
@@ -381,6 +385,7 @@ exports.getAddressBalance = getAddressBalance;
 exports.sendTextMessageToDevice = sendTextMessageToDevice;
 exports.sendTechMessageToDevice = sendTechMessageToDevice;
 exports.sendPaymentFromWallet = sendPaymentFromWallet;
+exports.sendPaymentFromWalletUseUnstableUnits = sendPaymentFromWalletUseUnstableUnits;
 exports.getListTransactionsForAddress = getListTransactionsForAddress;
 exports.getListTransactionsForWallet = getListTransactionsForWallet;
 exports.myAddressInfo = myAddressInfo;
