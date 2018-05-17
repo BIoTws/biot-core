@@ -6,14 +6,14 @@ async function start() {
 	let wallets = await core.getMyDeviceWallets();
 	console.error('wallets', wallets);
 
-	let addresses = await core.getAddressesInWallet(wallets[1]);
+	let addresses = await core.getAddressesInWallet(wallets[0]);
 	console.error(wallets[0], ' - ', addresses);
 
 	let unit = await core.sendPaymentFromWallet({
 		asset: 'base',
 		wallet: wallets[0],
-		toAddress: 'VY52VTHNX27WKRGFUGJY7KNTGXP3Z6YU',
-		amount: 25000,
+		toAddress: addresses[0],
+		amount: 1,
 		changeAddress: addresses[0],
 		deviceAddress: null
 	});

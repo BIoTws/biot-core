@@ -28,17 +28,20 @@ async function start() {
 			console.error('new_transfer: ', amount);
 		});
 		await channel.init();
-		console.error('transfer', await channel.transfer(500));
+		let dS = Date.now();
+		console.error('transfer', await channel.mutualClosure());
+		console.error('time', Date.now() - dS);
 		// console.error(await channel.closeNow());
-		console.error('info', channel.info());
+		// console.error('info', channel.info());
 	} else {
-		let channel = new Channel(wallets[0], myDeviceAddress, '0ER62QXE74WFU7ZVYFSJVJBLHVUPBO3Y4', null, 6000, 5000, 10);
+		let channel = new Channel(wallets[0], myDeviceAddress, '0ER62QXE74WFU7ZVYFSJVJBLHVUPBO3Y4', null, 1000, 1000, 10);
 		channel.events.on('error', error => {
 			console.error('channelError', channel.id, error);
 		});
 		channel.events.on('start', async () => {
 			console.error('channel start. t.js', channel.id);
 			console.error('info', channel.info());
+			console.error('transfer', await channel.transfer(1));
 			// console.error('close. waiting_stable_unit: ', await channel.closeNow());
 		});
 		channel.events.on('changed_step', (step) => {
