@@ -28,9 +28,9 @@ async function start() {
 			console.error('new_transfer: ', amount);
 		});
 		await channel.init();
-		let dS = Date.now();
-		console.error('transfer', await channel.mutualClosure());
-		console.error('time', Date.now() - dS);
+		await channel.transfer(1, 'test');
+		await channel.transfer(1, {text: 'test'});
+		await channel.transfer(1);
 		// console.error(await channel.closeNow());
 		// console.error('info', channel.info());
 	} else {
