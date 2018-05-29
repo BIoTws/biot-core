@@ -362,18 +362,6 @@ function listCorrespondents() {
 	return libCorrespondents.list();
 }
 
-function startChannel(opts) {
-	return libTransactions.startChannel(opts);
-}
-
-function takeMoneyFromContractUsingSignature(walletId, amount, shared_address, to_address, arrSigningDeviceAddresses) {
-	return libTransactions.takeMoneyFromContractUsingSignature(walletId, amount, shared_address, to_address, arrSigningDeviceAddresses);
-}
-
-function takeMoneyFromContractUsingSecrets(walletId, amount, shared_address, to_address, secrets) {
-	return libTransactions.takeMoneyFromContractUsingSecrets(walletId, amount, shared_address, to_address, secrets);
-}
-
 
 exports.createNewWallet = createNewWallet;
 exports.getWallets = getWallets;
@@ -395,6 +383,3 @@ exports.verifySign = verifySign;
 exports.addCorrespondent = addCorrespondent;
 exports.removeCorrespondent = removeCorrespondent;
 exports.listCorrespondents = listCorrespondents;
-exports.startChannel = startChannel;
-exports.takeMoneyFromContractUsingSignature = takeMoneyFromContractUsingSignature;
-exports.takeMoneyFromContractUsingSecrets = takeMoneyFromContractUsingSecrets;

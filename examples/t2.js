@@ -10,7 +10,7 @@ async function start() {
 	console.error('list', list);
 	if (list.length) {
 		console.error('start recovery');
-		channel = channelsManager.recoveryChannel(list[0]);
+		channel = channelsManager.restoreChannel(list[0]);
 		channel.events.on('start', () => {
 			console.error('channel start. t.js', channel.id);
 		});
