@@ -34,3 +34,14 @@ $ npm run docs
 4) **A:** waiting_transfer
 5) **A:** waiting_transfers
 6) **B:** waiting_transfers
+
+
+#### closeOneSide
+1) **A:** waiting_mci
+2) **A:** close
+
+
+#### closeMutually
+1) **B:** await_closing
+2) **A:** mutualClose
+3) **B:** mutualClose
