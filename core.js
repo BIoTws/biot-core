@@ -231,6 +231,27 @@ function sendPaymentFromWallet(options) {
 	return libTransactions.sendPaymentFromWallet(options);
 }
 
+/**
+ @description Sending payment from wallet use unstable units
+ @param {Object} options Payment options
+ @param {string} options.asset Payment asset
+ @param {string} options.wallet Wallet from which goes payment
+ @param {string} options.toAddress Address on which you send the payment
+ @param {number} options.amount Payment amount
+ @param {string} options.changeAddress Your new address after the payment
+ @param {string|null} options.deviceAddress Device address on what will be sent notification
+ @return {Promise.<string>} unit
+ @example
+ core.sendPaymentFromWalletUseUnstableUnits({
+		asset: 'base',
+		wallet: 'yXSWvqast2rrmwcR/f5QfUAXZLwaaiRvwE+N9whoZLc=',
+		toAddress: 'VY52VTHNX27WKRGFUGJY7KNTGXP3Z6YU',
+		amount: 10,
+		changeAddress: 'IZHG7LKW2FJ2KAUHL4RRPY3JG2HNVNPD',
+		deviceAddress: null
+	});
+ */
+
 function sendPaymentFromWalletUseUnstableUnits(options) {
 	return libTransactions.sendPaymentFromWalletUseUnstableUnits(options);
 }
