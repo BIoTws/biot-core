@@ -22,9 +22,9 @@ $ npm run docs
 A -> B
 
 #### Opening of channel 
-1) **A:** await_get1Contract
+1) **A:** await_get1Contract_initiator
 2) **B:** get1Contract
-3) **B:** await_get1Contract
+3) **B:** await_get1Contract_peer
 4) **A:** await_getInputsAndAddresses
 5) **B:** await_createChannel
 6) **A:** waiting_transfers
