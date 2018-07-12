@@ -315,10 +315,11 @@ function myAddressInfo(address) {
  core.signDevicePrivateKey('IZHG7LKW2FJ2KAUHL4RRPY3JG2HNVNPD');
  */
 function signDevicePrivateKey(hash) {
+	let buffer = Buffer.from(hash);
 	let device = require('byteballcore/device');
 	let devicePrivKey = xPrivKey.derive("m/1'").privateKey.bn.toBuffer({size: 32});
 
-	return {sign: ecdsaSig.sign(hash, devicePrivKey), pub_b64: device.getMyDevicePubKey()};
+	return {sign: ecdsaSig.sign(buffer, devicePrivKey), pub_b64: device.getMyDevicePubKey()};
 }
 
 
@@ -333,11 +334,12 @@ function signDevicePrivateKey(hash) {
  core.signWithAddress(0, 0, 0, 'IZHG7LKW2FJ2KAUHL4RRPY3JG2HNVNPD');
  */
 function signWithAddress(account, is_change, address_index, hash) {
+	let buffer = Buffer.from(hash);
 	let path = "m/44'/0'/" + account + "'/" + is_change + "/" + address_index;
 	let privateKey = xPrivKey.derive(path).privateKey;
 	let privKeyBuf = privateKey.bn.toBuffer({size: 32}); // https://github.com/bitpay/bitcore-lib/issues/47
 	let pubKeyb64 = ecdsa.publicKeyCreate(privKeyBuf, true).toString('base64')
-	return {sign: ecdsaSig.sign(hash, privKeyBuf), pub_b64: pubKeyb64};
+	return {sign: ecdsaSig.sign(buffer, privKeyBuf), pub_b64: pubKeyb64};
 }
 
 /**
@@ -350,7 +352,8 @@ function signWithAddress(account, is_change, address_index, hash) {
  core.verifySign('IZHG7LKW2FJ2KAUHL4RRPY3JG2HNVNPD', '/J6Gv9aT8KSgEP2TwmNoQ2W/JmZXYaXBLt4zBE8Po5Vm8TOX+fu53Y7DSYtuH/61EgR7WP5Spk76J8gFTCmPpg==', 'A4QdpqFIqVbyCXgbuzlHEMl+1osh2hGC3oVRzHU1V5V0');
  */
 function verifySign(hash, b64_sig, b64_pub_key) {
-	return ecdsaSig.verify(hash, b64_sig, b64_pub_key);
+	let buffer = Buffer.from(hash);
+	return ecdsaSig.verify(buffer, b64_sig, b64_pub_key);
 }
 
 /**
