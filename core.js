@@ -197,6 +197,7 @@ function sendTextMessageToDevice(device_address, text) {
  @description Sending tech message to device address
  @param {string} device_address Device address
  @param {object} object Object
+ @param {function} callback callback
  @example
  core.sendTechMessageToDevice('0PZT5VOY5AINZKW2SJ3Z7O4IDQNKPV364', {version: '0.1'})
  */
