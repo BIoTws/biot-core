@@ -65,6 +65,15 @@ exports.init = async (passphrase) => {
 	device.setDevicePrivateKey(devicePrivKey);
 	let my_device_address = device.getMyDeviceAddress();
 
+	let rows = await toEs6.dbQuery("SELECT 1 FROM extended_pubkeys WHERE device_address=?", [my_device_address]);
+	if (rows.length > 1)
+		throw Error("more than 1 extended_pubkey?");
+
+	if (rows.length === 0) {
+		console.log('passphrase is incorrect');
+		return false;
+	}
+
 	if (conf.permanent_pairing_secret)
 		db.query(
 			"INSERT " + db.getIgnore() + " INTO pairing_secrets (pairing_secret, is_permanent, expiry_date) VALUES (?, 1, '2038-01-01')",
@@ -91,7 +100,7 @@ exports.init = async (passphrase) => {
 		replaceConsoleLog();
 	}
 
-	return 'Initialized successfully';
+	return true;
 };
 
 /**
