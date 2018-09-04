@@ -396,6 +396,11 @@ function listCorrespondents() {
 	return libCorrespondents.list();
 }
 
+function getMyParingCode() {
+	const device = require('byteballcore/device');
+	return device.getMyDeviceAddress() + "@" + conf.hub + "#";
+}
+
 
 exports.createNewWallet = createNewWallet;
 exports.getWallets = getWallets;
@@ -417,3 +422,4 @@ exports.verifySign = verifySign;
 exports.addCorrespondent = addCorrespondent;
 exports.removeCorrespondent = removeCorrespondent;
 exports.listCorrespondents = listCorrespondents;
+exports.getMyParingCode = getMyParingCode;
