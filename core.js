@@ -399,7 +399,7 @@ function listCorrespondents() {
 
 function getMyParingCode() {
 	const device = require('byteballcore/device');
-	return device.getMyDeviceAddress() + "@" + conf.hub + "#";
+	return device.getMyDevicePubKey() + "@" + conf.hub + "#";
 }
 
 
