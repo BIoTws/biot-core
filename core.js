@@ -1,8 +1,6 @@
-const fs = require('fs');
 const util = require('util');
 const conf = require('byteballcore/conf');
 const Wallet = require('byteballcore/wallet');
-const desktopApp = require('byteballcore/desktop_app');
 const db = require('byteballcore/db');
 const eventBus = require('byteballcore/event_bus');
 const walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys');
@@ -19,8 +17,6 @@ const libTransactions = require('./lib/transactions');
 const libCorrespondents = require('./lib/correspondents');
 const libSqliteMigrations = require('./lib/sqlite_migrations');
 
-const appDataDir = desktopApp.getAppDataDir();
-
 const protocolVersion = '0.1';
 
 let xPrivKey;
@@ -28,6 +24,11 @@ let xPrivKey;
 process.on('unhandledRejection', up => { throw up; });
 
 function replaceConsoleLog() {
+	if (global.window && window.cordova) return;
+	const fs = require('fs' + '');
+	if (!fs) return;
+	const desktopApp = require('byteballcore/desktop_app' + '');
+	const appDataDir = desktopApp.getAppDataDir();
 	let log_filename = conf.LOG_FILENAME || (appDataDir + '/log.txt');
 	let writeStream = fs.createWriteStream(log_filename);
 	console.log('---------------');
