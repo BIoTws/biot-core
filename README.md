@@ -21,12 +21,9 @@ A -> B
 
 #### Opening of channel 
 1) **A:** await_get1Contract_initiator
-2) **B:** get1Contract
-3) **B:** await_get1Contract_peer
-4) **A:** await_getInputsAndAddresses
-5) **B:** await_createChannel
-6) **A:** waiting_transfers
-7) **B:** waiting_transfers
+2) **B:** await_createChannel
+3) **A:** waiting_transfers
+4) **B:** waiting_transfers
 
 
 #### Transfer
@@ -58,6 +55,11 @@ A -> B
 3) **A:** getInputsAndAddresses
 4) **B:** inputsAndAddresses
 5) **A:** channelAddress
+
+#### Opening of channel
+1) **A:** get1Contract
+2) **B:** 1Contract
+3) **A:** addressesAndContract
 
 #### Transfer
 1) **A:** transfer_start
