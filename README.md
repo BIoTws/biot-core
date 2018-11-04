@@ -54,7 +54,7 @@ A -> B
 2) **B:** 1Contract
 3) **A:** getInputsAndAddresses
 4) **B:** inputsAndAddresses
-5) **A:** channelAddress
+5) **A:** addressesAndContract
 
 #### Opening of channel
 1) **A:** get1Contract
