@@ -215,7 +215,7 @@ function sendTechMessageToDevice(device_address, object, callback) {
 	let device = require('byteballcore/device');
 	object.version = protocolVersion;
 	object.app = 'BIoT';
-	device.sendMessageToDevice(device_address, 'text', JSON.stringify(object), callback);
+	device.sendMessageToDevice(device_address, 'object', object, callback);
 }
 
 /**
