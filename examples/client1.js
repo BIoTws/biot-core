@@ -1,18 +1,18 @@
 const core = require('../core');
-const eventBus = require('byteballcore/event_bus');
-const composer = require('byteballcore/composer');
-const Wallet = require('byteballcore/wallet');
+const eventBus = require('ocore/event_bus');
+const composer = require('ocore/composer');
+const Wallet = require('ocore/wallet');
 const wallet = require('../lib/wallet');
 const address = require('../lib/address');
-const db = require('byteballcore/db');
-const ecdsaSig = require('byteballcore/signature.js');
-const conf = require('byteballcore/conf');
+const db = require('ocore/db');
+const ecdsaSig = require('ocore/signature.js');
+const conf = require('ocore/conf');
 const crypto = require('crypto');
 
 let xPrivKey;
 
 async function start() {
-	let device = require('byteballcore/device');
+	let device = require('ocore/device');
 
 	xPrivKey = await core.init('test');
 
@@ -68,9 +68,9 @@ async function start() {
 	}
 
 	async function createChannel(device_address, object) {
-		let device = require('byteballcore/device');
-		let network = require('byteballcore/network');
-		let my_witnesses = require('byteballcore/my_witnesses');
+		let device = require('ocore/device');
+		let network = require('ocore/network');
+		let my_witnesses = require('ocore/my_witnesses');
 		let objSharedAddress = await createSharedAddress({
 			a_pay,
 			b_pay,
@@ -181,7 +181,7 @@ async function start() {
 				}
 			};
 
-			let walletDefinedByAddresses = require('byteballcore/wallet_defined_by_addresses.js');
+			let walletDefinedByAddresses = require('ocore/wallet_defined_by_addresses.js');
 			walletDefinedByAddresses.createNewSharedAddress(arrDefinition, assocSignersByPath, {
 				ifError: (err) => {
 					console.error('erra', err);
@@ -244,7 +244,7 @@ async function start() {
 				}
 			};
 
-			let walletDefinedByAddresses = require('byteballcore/wallet_defined_by_addresses.js');
+			let walletDefinedByAddresses = require('ocore/wallet_defined_by_addresses.js');
 			console.error('dbg', 'SharedAddress', arrDefinition, assocSignersByPath);
 			walletDefinedByAddresses.createNewSharedAddress(arrDefinition, assocSignersByPath, {
 				ifError: (err) => {

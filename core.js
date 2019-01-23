@@ -1,10 +1,10 @@
 const util = require('util');
-const conf = require('byteballcore/conf');
-const Wallet = require('byteballcore/wallet');
-const db = require('byteballcore/db');
-const eventBus = require('byteballcore/event_bus');
-const walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys');
-const ecdsaSig = require('byteballcore/signature.js');
+const conf = require('ocore/conf');
+const Wallet = require('ocore/wallet');
+const db = require('ocore/db');
+const eventBus = require('ocore/event_bus');
+const walletDefinedByKeys = require('ocore/wallet_defined_by_keys');
+const ecdsaSig = require('ocore/signature.js');
 const ecdsa = require('secp256k1');
 
 const Mnemonic = require('bitcore-mnemonic');
@@ -27,7 +27,7 @@ function replaceConsoleLog() {
 	if (global.window && window.cordova) return;
 	const fs = require('fs' + '');
 	if (!fs) return;
-	const desktopApp = require('byteballcore/desktop_app' + '');
+	const desktopApp = require('ocore/desktop_app' + '');
 	const appDataDir = desktopApp.getAppDataDir();
 	let log_filename = conf.LOG_FILENAME || (appDataDir + '/log.txt');
 	let writeStream = fs.createWriteStream(log_filename);
@@ -62,7 +62,7 @@ exports.init = async (passphrase) => {
 
 	let devicePrivKey = xPrivKey.derive("m/1'").privateKey.bn.toBuffer({size: 32});
 
-	let device = require('byteballcore/device');
+	let device = require('ocore/device');
 	device.setDevicePrivateKey(devicePrivKey);
 	let my_device_address = device.getMyDeviceAddress();
 
@@ -91,7 +91,7 @@ exports.init = async (passphrase) => {
 	if (conf.permanent_pairing_secret)
 		console.log("====== my pairing code: " + my_device_pubkey + "@" + conf.hub + "#" + conf.permanent_pairing_secret);
 	if (conf.bLight) {
-		let light_wallet = require('byteballcore/light_wallet');
+		let light_wallet = require('ocore/light_wallet');
 		light_wallet.setLightVendorHost(conf.hub);
 	}
 	await libSqliteMigrations.migrateDb();
@@ -117,7 +117,7 @@ async function getWallets() {
 }
 
 async function getMyDeviceWallets() {
-	let device = require('byteballcore/device')
+	let device = require('ocore/device')
 	let rows = await toEs6.dbQuery("SELECT wallet FROM wallets JOIN wallet_signing_paths USING(wallet) WHERE device_address = ?",
 		[device.getMyDeviceAddress()]);
 	return rows.map(row => row.wallet);
@@ -199,7 +199,7 @@ async function getAddressBalance(address) {
  core.sendTextMessageToDevice('0PZT5VOY5AINZKW2SJ3Z7O4IDQNKPV364', 'Hello!')
  */
 function sendTextMessageToDevice(device_address, text) {
-	let device = require('byteballcore/device');
+	let device = require('ocore/device');
 	device.sendMessageToDevice(device_address, 'text', text);
 }
 
@@ -212,7 +212,7 @@ function sendTextMessageToDevice(device_address, text) {
  core.sendTechMessageToDevice('0PZT5VOY5AINZKW2SJ3Z7O4IDQNKPV364', {version: '0.1'})
  */
 function sendTechMessageToDevice(device_address, object, callback) {
-	let device = require('byteballcore/device');
+	let device = require('ocore/device');
 	object.version = protocolVersion;
 	object.app = 'BIoT';
 	device.sendMessageToDevice(device_address, 'object', object, callback);
@@ -327,7 +327,7 @@ function myAddressInfo(address) {
  */
 function signDevicePrivateKey(hash) {
 	let buffer = Buffer.from(hash);
-	let device = require('byteballcore/device');
+	let device = require('ocore/device');
 	let devicePrivKey = xPrivKey.derive("m/1'").privateKey.bn.toBuffer({size: 32});
 
 	return {sign: ecdsaSig.sign(buffer, devicePrivKey), pub_b64: device.getMyDevicePubKey()};
@@ -398,7 +398,7 @@ function listCorrespondents() {
 }
 
 function getMyParingCode() {
-	const device = require('byteballcore/device');
+	const device = require('ocore/device');
 	return device.getMyDevicePubKey() + "@" + conf.hub + "#";
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "biot-core",
-  "version": "0.1.12",
+  "version": "0.1.15",
   "description": "",
   "main": "core.js",
   "scripts": {
@@ -18,7 +18,7 @@
   "dependencies": {
     "async": "^2.6.0",
     "bitcore-mnemonic": "~1.0.0",
-    "byteballcore": "git+https://github.com/byteball/byteballcore.git",
+    "ocore": "git+https://github.com/byteball/ocore.git",
     "moment": "^2.20.1",
     "secp256k1": "^3.5.0"
   },

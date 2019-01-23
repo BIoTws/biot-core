@@ -1,5 +1,5 @@
 const core = require('../core');
-const eventBus = require('byteballcore/event_bus');
+const eventBus = require('ocore/event_bus');
 
 async function start() {
 	await core.init('test');

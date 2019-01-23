@@ -1,4 +1,4 @@
-const bbConstatns = require('byteballcore/constants');
+const bbConstatns = require('ocore/constants');
 
 const core = require('../core');
 
