@@ -66,6 +66,8 @@ exports.init = async (passphrase) => {
 	device.setDevicePrivateKey(devicePrivKey);
 	let my_device_address = device.getMyDeviceAddress();
 
+	let rows = await toEs6.dbQuery("SELECT 1 FROM extended_pubkeys WHERE device_address=?", [my_device_address]);
+
 	if (rows.length === 0) {
 		console.log('passphrase is incorrect');
 		return false;
