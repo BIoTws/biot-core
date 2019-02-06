@@ -416,6 +416,7 @@ function postDataFeed(objDataFeed) {
 				paying_addresses: [my_address],
 				outputs: [{address: my_address, amount: 0}],
 				signer: libKeys.getLocalSigner({}, addresses, libKeys.signWithLocalPrivateKey),
+				spend_unconfirmed: 'all',
 				callbacks: composer.getSavingCallbacks({
 					ifNotEnoughFunds: console.error,
 					ifError: console.error,
