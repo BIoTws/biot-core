@@ -55,34 +55,34 @@ exports.init = async (passphrase) => {
 	let saveTempKeys = (new_temp_key, new_prev_temp_key, onDone) => {
 		libKeys.writeKeys(keys.mnemonic_phrase, new_temp_key, new_prev_temp_key, onDone).catch(Promise.reject);
 	};
-
+	
 	let mnemonic = new Mnemonic(keys.mnemonic_phrase);
 	xPrivKey = mnemonic.toHDPrivateKey(passphrase);
 	libKeys.setXPrivKey(xPrivKey);
-
+	
 	let devicePrivKey = xPrivKey.derive("m/1'").privateKey.bn.toBuffer({size: 32});
-
+	
 	let device = require('ocore/device');
 	device.setDevicePrivateKey(devicePrivKey);
 	let my_device_address = device.getMyDeviceAddress();
-
+	
 	let rows = await toEs6.dbQuery("SELECT 1 FROM extended_pubkeys WHERE device_address=?", [my_device_address]);
-
+	
 	if (rows.length === 0) {
 		console.log('passphrase is incorrect');
 		return false;
 	}
-
+	
 	if (conf.permanent_pairing_secret)
 		db.query(
 			"INSERT " + db.getIgnore() + " INTO pairing_secrets (pairing_secret, is_permanent, expiry_date) VALUES (?, 1, '2038-01-01')",
 			[conf.permanent_pairing_secret]
 		);
-
+	
 	device.setTempKeys(keys.deviceTempPrivKey, keys.devicePrevTempPrivKey, saveTempKeys);
 	device.setDeviceName(conf.deviceName);
 	device.setDeviceHub(conf.hub);
-
+	
 	let my_device_pubkey = device.getMyDevicePubKey();
 	console.log("====== my device address: " + my_device_address);
 	console.log("====== my device pubkey: " + my_device_pubkey);
@@ -94,11 +94,11 @@ exports.init = async (passphrase) => {
 	}
 	await libSqliteMigrations.migrateDb();
 	eventBus.emit('headless_wallet_ready');
-
+	
 	if (!process.env.DEBUG) {
 		replaceConsoleLog();
 	}
-
+	
 	return true;
 };
 
@@ -327,7 +327,7 @@ function signDevicePrivateKey(hash) {
 	let buffer = Buffer.from(hash);
 	let device = require('ocore/device');
 	let devicePrivKey = xPrivKey.derive("m/1'").privateKey.bn.toBuffer({size: 32});
-
+	
 	return {sign: ecdsaSig.sign(buffer, devicePrivKey), pub_b64: device.getMyDevicePubKey()};
 }
 
@@ -400,6 +400,42 @@ function getMyParingCode() {
 	return device.getMyDevicePubKey() + "@" + conf.hub + "#";
 }
 
+function postDataFeed(objDataFeed) {
+	return new Promise(resolve => {
+		(async () => {
+			const network = require('ocore/network.js');
+			const composer = require('ocore/composer.js');
+			const objectHash = require('ocore/object_hash.js');
+			const wallets = await
+				getWallets();
+			const addresses = await
+				getAddressesInWallet(wallets[0]);
+			const my_address = addresses[0];
+			
+			let params = {
+				paying_addresses: [my_address],
+				outputs: [{address: my_address, amount: 0}],
+				signer: libKeys.getLocalSigner({}, addresses, libKeys.signWithLocalPrivateKey),
+				callbacks: composer.getSavingCallbacks({
+					ifNotEnoughFunds: console.error,
+					ifError: console.error,
+					ifOk: function (objJoint) {
+						network.broadcastJoint(objJoint);
+						return resolve(objJoint);
+					}
+				})
+			};
+			let objMessage = {
+				app: "data_feed",
+				payload_location: "inline",
+				payload_hash: objectHash.getBase64Hash(objDataFeed),
+				payload: objDataFeed
+			};
+			params.messages = [objMessage];
+			composer.composeJoint(params);
+		})();
+	});
+}
 
 exports.createNewWallet = createNewWallet;
 exports.getWallets = getWallets;
@@ -422,3 +458,4 @@ exports.addCorrespondent = addCorrespondent;
 exports.removeCorrespondent = removeCorrespondent;
 exports.listCorrespondents = listCorrespondents;
 exports.getMyParingCode = getMyParingCode;
+exports.postDataFeed = postDataFeed;
