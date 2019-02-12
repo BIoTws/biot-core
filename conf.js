@@ -9,3 +9,7 @@ exports.KEYS_FILENAME = 'keys.json';
 exports.TIMESTAMPER_ADDRESS = 'OPNUXBRSSQQGHKQNEPD2GLWQYEUY5XLD'; // isTestnet ? 'OPNUXBRSSQQGHKQNEPD2GLWQYEUY5XLD' : 'I2ADHGP4HL6J37NQAD73J7E5SKFIXJOT'
 
 exports.unitValue = 1000000000; //GB
+exports.salt = 'qfwfO(JU)IDFjpwsadsd!@#L }PA<SCASD';
+
+exports.socksHost = '127.0.0.1';
+exports.socksPort = 9050;

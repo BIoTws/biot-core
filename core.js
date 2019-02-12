@@ -406,16 +406,15 @@ function postDataFeed(objDataFeed) {
 			const network = require('ocore/network.js');
 			const composer = require('ocore/composer.js');
 			const objectHash = require('ocore/object_hash.js');
-			const wallets = await
-				getWallets();
-			const addresses = await
-				getAddressesInWallet(wallets[0]);
+			const wallet = require('ocore/wallet.js');
+			const wallets = await getWallets();
+			const addresses = await getAddressesInWallet(wallets[0]);
 			const my_address = addresses[0];
 			
 			let params = {
 				paying_addresses: [my_address],
 				outputs: [{address: my_address, amount: 0}],
-				signer: libKeys.getLocalSigner({}, addresses, libKeys.signWithLocalPrivateKey),
+				signer: wallet.getSigner({}, addresses, libKeys.signWithLocalPrivateKey),
 				spend_unconfirmed: 'all',
 				callbacks: composer.getSavingCallbacks({
 					ifNotEnoughFunds: console.error,
@@ -436,6 +435,73 @@ function postDataFeed(objDataFeed) {
 			composer.composeJoint(params);
 		})();
 	});
+}
+
+function postPrivateProfile(user_address, profile) {
+	return new Promise(resolve => {
+		(async () => {
+			const network = require('ocore/network.js');
+			const composer = require('ocore/composer.js');
+			const objectHash = require('ocore/object_hash.js');
+			const wallet = require('ocore/wallet.js');
+			const wallets = await getWallets();
+			const addresses = await getAddressesInWallet(wallets[0]);
+			const my_address = addresses[0];
+			
+			let src_profile = {};f
+			let hidden_profile = {};
+			for (let field in profile) {
+				let value = profile[field];
+				let blinding = composer.generateBlinding();
+				hidden_profile[field] = objectHash.getBase64Hash([value, blinding]);
+				src_profile[field] = [value, blinding];
+			}
+			let profile_hash = objectHash.getBase64Hash(hidden_profile);
+			
+			let privProfile = {
+				profile_hash: profile_hash,
+				user_id: objectHash.getBase64Hash([profile, conf.salt || ''])
+			};
+			
+			let payload = {
+				address: user_address,
+				profile: privProfile
+			};
+			
+			let params = {
+				paying_addresses: [my_address],
+				outputs: [{address: my_address, amount: 0}],
+				signer: wallet.getSigner({}, addresses, libKeys.signWithLocalPrivateKey),
+				spend_unconfirmed: 'all',
+				callbacks: composer.getSavingCallbacks({
+					ifNotEnoughFunds: console.error,
+					ifError: console.error,
+					ifOk: function (objJoint) {
+						network.broadcastJoint(objJoint);
+						return resolve({objJoint, src_profile, address: my_address});
+					}
+				})
+			};
+			
+			console.error('payload', payload);
+			let objMessage = {
+				app: "attestation",
+				payload_location: "inline",
+				payload_hash: objectHash.getBase64Hash(payload),
+				payload: payload
+			};
+			params.messages = [objMessage];
+			composer.composeJoint(params);
+		})();
+	});
+}
+
+function saveProfile(attester, my_address, unit, src_profile) {
+	return toEs6.dbQuery("INSERT INTO profiles (attester, address, unit, object) VALUES(?,?,?,?)", [attester, my_address, unit, src_profile]);
+}
+
+function getProfiles() {
+	return toEs6.dbQuery("SELECT * FROM profiles");
 }
 
 exports.createNewWallet = createNewWallet;
@@ -460,3 +526,6 @@ exports.removeCorrespondent = removeCorrespondent;
 exports.listCorrespondents = listCorrespondents;
 exports.getMyParingCode = getMyParingCode;
 exports.postDataFeed = postDataFeed;
+exports.postPrivateProfile = postPrivateProfile;
+exports.saveProfile = saveProfile;
+exports.getProfiles = getProfiles;
