@@ -448,7 +448,7 @@ function postPrivateProfile(user_address, profile) {
 			const addresses = await getAddressesInWallet(wallets[0]);
 			const my_address = addresses[0];
 			
-			let src_profile = {};f
+			let src_profile = {};
 			let hidden_profile = {};
 			for (let field in profile) {
 				let value = profile[field];
