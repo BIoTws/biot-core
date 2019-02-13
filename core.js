@@ -261,8 +261,8 @@ function sendPaymentFromWallet(options) {
 	});
  */
 
-function sendPaymentFromWalletUseUnstableUnits(options) {
-	return libTransactions.sendPaymentFromWalletUseUnstableUnits(options);
+function sendPaymentUseUnstableUnits(to_address, amount, my_addresses, asset) {
+	return libTransactions.sendPaymentUseUnstableUnits(to_address, amount, my_addresses, asset);
 }
 
 /**
@@ -514,7 +514,7 @@ exports.getAddressBalance = getAddressBalance;
 exports.sendTextMessageToDevice = sendTextMessageToDevice;
 exports.sendTechMessageToDevice = sendTechMessageToDevice;
 exports.sendPaymentFromWallet = sendPaymentFromWallet;
-exports.sendPaymentFromWalletUseUnstableUnits = sendPaymentFromWalletUseUnstableUnits;
+exports.sendPaymentUseUnstableUnits = sendPaymentUseUnstableUnits;
 exports.getListTransactionsForAddress = getListTransactionsForAddress;
 exports.getListTransactionsForWallet = getListTransactionsForWallet;
 exports.myAddressInfo = myAddressInfo;
