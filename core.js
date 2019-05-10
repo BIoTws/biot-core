@@ -51,6 +51,19 @@ function replaceConsoleLog() {
  await core.init('test')
  */
 exports.init = async (passphrase) => {
+	let deviceName;
+	if (global.window && window.cordova) {
+		deviceName = window.localStorage.getItem("device_name");
+		if (!deviceName) {
+			return 'Please set device name';
+		}
+	} else {
+		if (!conf.deviceName) {
+			return 'Please set device name';
+		} else {
+			deviceName = conf.deviceName;
+		}
+	}
 	let keys = await libKeys.readKeys(passphrase);
 	let saveTempKeys = (new_temp_key, new_prev_temp_key, onDone) => {
 		libKeys.writeKeys(keys.mnemonic_phrase, new_temp_key, new_prev_temp_key, onDone).catch(Promise.reject);
@@ -80,7 +93,7 @@ exports.init = async (passphrase) => {
 		);
 	
 	device.setTempKeys(keys.deviceTempPrivKey, keys.devicePrevTempPrivKey, saveTempKeys);
-	device.setDeviceName(conf.deviceName);
+	device.setDeviceName(deviceName);
 	device.setDeviceHub(conf.hub);
 	
 	let my_device_pubkey = device.getMyDevicePubKey();
@@ -101,6 +114,33 @@ exports.init = async (passphrase) => {
 	
 	return true;
 };
+
+async function updateConfFile(obj) {
+	const desktopApp = require('ocore/desktop_app' + '');
+	const appDataDir = desktopApp.getAppDataDir();
+	const userConfFile = appDataDir + '/conf.json';
+	let json = require(userConfFile);
+	for (let key in obj) {
+		if (obj.hasOwnProperty(key)) {
+			json[key] = obj[key];
+		}
+	}
+	await new Promise(resolve => {
+		fs.writeFile(userConfFile, JSON.stringify(json, null, '\t'), 'utf8', (err) => {
+			if (err)
+				throw Error('failed to write conf.json: ' + err);
+			resolve();
+		});
+	});
+}
+
+async function setDeviceName(name) {
+	if (global.window && window.cordova) {
+		window.localStorage.setItem('device_name', name);
+	} else {
+		await updateConfFile({deviceName: name});
+	}
+}
 
 /**
  @async
@@ -529,3 +569,4 @@ exports.postDataFeed = postDataFeed;
 exports.postPrivateProfile = postPrivateProfile;
 exports.saveProfile = saveProfile;
 exports.getProfiles = getProfiles;
+exports.setDeviceName = setDeviceName;
