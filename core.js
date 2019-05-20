@@ -16,6 +16,7 @@ const libAddress = require('./lib/address');
 const libTransactions = require('./lib/transactions');
 const libCorrespondents = require('./lib/correspondents');
 const libSqliteMigrations = require('./lib/sqlite_migrations');
+const libWalletTransactions = require('./lib/walletTransactions');
 
 const protocolVersion = '0.1';
 
@@ -112,7 +113,7 @@ exports.init = async (passphrase) => {
 		replaceConsoleLog();
 	}
 	
-	return true;
+	return keys.mnemonic_phrase;
 };
 
 async function updateConfFile(obj) {
@@ -570,3 +571,4 @@ exports.postPrivateProfile = postPrivateProfile;
 exports.saveProfile = saveProfile;
 exports.getProfiles = getProfiles;
 exports.setDeviceName = setDeviceName;
+exports.getWalletTransactions = libWalletTransactions.getWalletTransactions;
