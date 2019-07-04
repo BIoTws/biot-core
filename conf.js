@@ -11,5 +11,5 @@ exports.TIMESTAMPER_ADDRESS = 'OPNUXBRSSQQGHKQNEPD2GLWQYEUY5XLD'; // isTestnet ?
 exports.unitValue = 1000000000; //GB
 exports.salt = 'qfwfO(JU)IDFjpwsadsd!@#L }PA<SCASD';
 
-exports.socksHost = '127.0.0.1';
-exports.socksPort = 9050;
+// exports.socksHost = '127.0.0.1';
+// exports.socksPort = 9050;
