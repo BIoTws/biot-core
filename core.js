@@ -281,6 +281,10 @@ function sendPaymentFromWallet(options) {
 	return libTransactions.sendPaymentFromWallet(options);
 }
 
+function sendMultiPayment(options) {
+	return libTransactions.sendMultiPayment(options);
+}
+
 /**
  @description Sending payment from wallet use unstable units
  @param {Object} options Payment options
@@ -571,4 +575,5 @@ exports.postPrivateProfile = postPrivateProfile;
 exports.saveProfile = saveProfile;
 exports.getProfiles = getProfiles;
 exports.setDeviceName = setDeviceName;
+exports.sendMultiPayment = sendMultiPayment;
 exports.getWalletTransactions = libWalletTransactions.getWalletTransactions;
