@@ -11,6 +11,16 @@ const bcore = require('./core');
 const constants = require('ocore/constants');
 const db = require('ocore/db');
 
+const libToEs6 = require('./lib/toEs6');
+
+let _db = {
+	query: libToEs6.dbQuery,
+	cbquery: db.query,
+	getIgnore: db.getIgnore,
+	takeConnectionFromPool: db.takeConnectionFromPool,
+	escape: db.escape
+};
+
 const REQUEST_TIMEOUT = 10 * 1000;
 
 require('./aa_watcher.js');
@@ -20,15 +30,13 @@ let paymentReceivedCallback;
 let assocResponseByTag = {};
 let my_address;
 
-let appDB = require('ocore/db.js');
-
-eventBus.once('headless_wallet_ready', function () {
+eventBus.once('aa_watcher_init', function () {
 	setTimeout(init, 1000);
 });
 
 async function init() {
 
-	const results = await appDB.query("SELECT my_address FROM channels_config");
+	const results = await _db.query("SELECT my_address FROM aa_channels_config");
 
 	if (results[0])
 		my_address = results[0].my_address;
@@ -92,13 +100,13 @@ async function treatIncomingRequest(objRequest, handle) {
 			return handle({error: "No params"});
 		if (!validationUtils.isValidAddress(objRequest.params.aa_address))
 			return handle({error: "Invalid aa address"});
-		const channels = await appDB.query("SELECT status,asset,is_definition_confirmed FROM channels WHERE aa_address=?", [objRequest.params.aa_address]);
+		const channels = await _db.query("SELECT status,asset,is_definition_confirmed FROM aa_channels WHERE aa_address=?", [objRequest.params.aa_address]);
 		if (channels.length === 0)
 			return handle({error: "aa address not known"});
 		if (channels[0].status == "open")
 			return handle({response: true});
 		else if (channels[0].status == "created" || channels[0].status == "close") {
-			getUnconfirmedSpendableAmountForChannel(appDB, channels[0], objRequest.params.aa_address, function (error, allowed_unconfirmed_amount) {
+			getUnconfirmedSpendableAmountForChannel(_db, channels[0], objRequest.params.aa_address, function (error, allowed_unconfirmed_amount) {
 				if (error)
 					return handle({error: error});
 				else if (allowed_unconfirmed_amount > 0)
@@ -119,7 +127,7 @@ async function getUnconfirmedSpendableAmountForChannel(conn, objChannel, aa_addr
 
 	const maxValidTimestamp = Date.now() / 1000 - conf.unconfirmedAmountsLimitsByAssetOrChannel[objChannel.asset].minimum_time_in_second;
 	const unconfirmedUnitsRows = await conn.query("SELECT SUM(amount) AS amount,close_channel,has_definition,is_bad_sequence,timestamp \n\
-	FROM unconfirmed_units_from_peer WHERE aa_address=?", [aa_address]);
+	FROM aa_unconfirmed_units_from_peer WHERE aa_address=?", [aa_address]);
 	const bHasBeenClosed = unconfirmedUnitsRows.some(function (row) {
 		return row.close_channel === 1
 	});
@@ -143,8 +151,8 @@ async function getUnconfirmedSpendableAmountForChannel(conn, objChannel, aa_addr
 			unconfirmedDeposit += row.amount;
 	})
 
-	const unconfirmedSpentByAssetRows = await conn.query("SELECT SUM(amount_spent_by_peer - amount_deposited_by_peer) AS amount FROM channels WHERE asset=?", [objChannel.asset]);
-	const unconfirmedSpentByChannelRows = await conn.query("SELECT amount_spent_by_peer - amount_deposited_by_peer AS amount FROM channels WHERE aa_address=?", [aa_address]);
+	const unconfirmedSpentByAssetRows = await conn.query("SELECT SUM(amount_spent_by_peer - amount_deposited_by_peer) AS amount FROM aa_channels WHERE asset=?", [objChannel.asset]);
+	const unconfirmedSpentByChannelRows = await conn.query("SELECT amount_spent_by_peer - amount_deposited_by_peer AS amount FROM aa_channels WHERE aa_address=?", [aa_address]);
 
 	const unconfirmedSpentByAsset = unconfirmedSpentByAssetRows[0] ? Math.max(unconfirmedSpentByAssetRows[0].amount, 0) : 0;
 	const unconfirmedSpentByChannel = unconfirmedSpentByChannelRows[0] ? Math.max(unconfirmedSpentByChannelRows[0].amount, 0) : 0;
@@ -194,7 +202,7 @@ function saveChannelCreatedByPeer(objParams, handle) {
 		return handle("Invalid asset");
 
 	const aa_address = aaDefinitions.getAaAddress(my_address, objParams.address, objParams.timeout, objParams.asset, objParams.salt);
-	appDB.query("INSERT " + appDB.getIgnore() + " INTO channels (asset, timeout,aa_address,salt,peer_address,peer_device_address,peer_url,is_known_by_peer) VALUES (?,?,?,?,?,?,?,1)",
+	_db.cbquery("INSERT " + _db.getIgnore() + " INTO aa_channels (asset, timeout,aa_address,salt,peer_address,peer_device_address,peer_url,is_known_by_peer) VALUES (?,?,?,?,?,?,?,1)",
 		[objParams.asset, objParams.timeout, aa_address, objParams.salt, objParams.address, objParams.from_address, objParams.url], function (result) {
 			if (result.affectedRows !== 1)
 				return handle("this salt already exists");
@@ -211,7 +219,7 @@ function setCallBackForPaymentReceived(_cb) {
 }
 
 async function close(aa_address, handle) {
-	const channels = await appDB.query("SELECT amount_spent_by_peer,amount_spent_by_me,last_message_from_peer, period, overpayment_from_peer FROM channels WHERE aa_address=?", [aa_address]);
+	const channels = await _db.query("SELECT amount_spent_by_peer,amount_spent_by_me,last_message_from_peer, period, overpayment_from_peer FROM aa_channels WHERE aa_address=?", [aa_address]);
 	if (channels.length === 0)
 		return handle("unknown AA address");
 	const channel = channels[0];
@@ -238,7 +246,7 @@ async function close(aa_address, handle) {
 	if (error)
 		handle("error when closing channel " + error);
 	else
-		appDB.query("UPDATE channels SET status='closing_initiated_by_me' WHERE aa_address=?", [aa_address]);
+		_db.query("UPDATE aa_channels SET status='closing_initiated_by_me' WHERE aa_address=?", [aa_address]);
 }
 
 
@@ -247,7 +255,7 @@ function deposit(aa_address, amount, handle) {
 		return handle("amount must be positive integer");
 
 	mutex.lock([aa_address], async function (unlock) {
-		const channels = await appDB.query("SELECT status,asset FROM channels WHERE aa_address=?", [aa_address]);
+		const channels = await _db.query("SELECT status,asset FROM aa_channels WHERE aa_address=?", [aa_address]);
 		if (channels.length != 1) {
 			unlock();
 			return handle("unknown channel");
@@ -281,7 +289,7 @@ function deposit(aa_address, amount, handle) {
 			unlock();
 			return handle("error when deposit to channel " + error);
 		} else {
-			await appDB.query("INSERT INTO my_deposits (unit, amount, aa_address) VALUES (?, ?, ?)", [unit, amount, aa_address]);
+			await _db.query("INSERT INTO aa_my_deposits (unit, amount, aa_address) VALUES (?, ?, ?)", [unit, amount, aa_address]);
 			unlock();
 			return handle(null);
 		}
@@ -390,7 +398,7 @@ async function createNewChannel(peer, initial_amount, options, handle) {
 }
 
 async function createChannelAndSendDefinitionAndDeposit(initial_amount, arrDefinition, auto_refill_threshold, auto_refill_amount, asset, timeout, aa_address, salt, peer_address, peer_device_address, peer_url, handle) {
-	const result = await appDB.query("INSERT " + appDB.getIgnore() + " INTO channels \n\
+	const result = await _db.query("INSERT " + _db.getIgnore() + " INTO aa_channels \n\
 		(auto_refill_threshold,auto_refill_amount, asset, timeout,aa_address,salt,peer_address,peer_device_address,peer_url) \n\
 		VALUES (?,?,?,?,?,?,?,?,?)",
 		[auto_refill_threshold, auto_refill_amount, asset, timeout, aa_address, salt, peer_address, peer_device_address, peer_url]);
@@ -443,9 +451,9 @@ function sendMessageAndPay(aa_address, message, payment_amount, handle) {
 			if (typeof responseFromPeer != 'object')
 				return handle("wrong response from peer");
 			if (responseFromPeer.error) {
-				await appDB.query("UPDATE channels SET amount_possibly_lost_by_me=amount_possibly_lost_by_me+? WHERE aa_address=?", [payment_amount, aa_address]);
+				await _db.query("UPDATE aa_channels SET amount_possibly_lost_by_me=amount_possibly_lost_by_me+? WHERE aa_address=?", [payment_amount, aa_address]);
 				if (responseFromPeer.error_code == "closing_initiated_by_peer")
-					await appDB.query("UPDATE channels SET status='closing_initiated_by_peer' WHERE aa_address=?", [aa_address]);
+					await _db.query("UPDATE aa_channels SET status='closing_initiated_by_peer' WHERE aa_address=?", [aa_address]);
 				return handle(responseFromPeer.error);
 			}
 			if (!responseFromPeer.response)
@@ -496,7 +504,7 @@ function sendRequestToPeer(comLayer, peer, objToBeSent, responseCb, timeOutCb) {
 function sendDefinitionAndDepositToChannel(aa_address, arrDefinition, filling_amount, asset) {
 	return new Promise(async (resolve, reject) => {
 		const payload = {address: aa_address, definition: arrDefinition};
-		let wallets = await bcore.getWallets();
+
 		const options = {
 			messages: [{
 				app: 'definition',
@@ -505,9 +513,9 @@ function sendDefinitionAndDepositToChannel(aa_address, arrDefinition, filling_am
 				payload: payload
 			}],
 			asset: asset,
-			change_address: await bcore.createNewAddress(wallets[0]),
+			change_address: my_address,
 			spend_unconfirmed: 'all'
-		};
+		}
 
 		if (asset == 'base')
 			options.base_outputs = [{address: aa_address, amount: filling_amount}];
@@ -515,12 +523,12 @@ function sendDefinitionAndDepositToChannel(aa_address, arrDefinition, filling_am
 			options.asset_outputs = [{address: aa_address, amount: filling_amount}];
 			options.base_outputs = [{address: aa_address, amount: 10000}];
 		}
-		options.wallet = wallets[0];
+		options.wallet = (await bcore.getWallets())[0];
 		let [error, unit] = await bcore.sendMultiPayment(options);
 		if (error)
 			reject("error when creating channel " + error);
 		else {
-			await appDB.query("INSERT INTO my_deposits (unit, amount, aa_address) VALUES (?, ?, ?)", [unit, filling_amount, aa_address]);
+			await _db.query("INSERT INTO aa_my_deposits (unit, amount, aa_address) VALUES (?, ?, ?)", [unit, filling_amount, aa_address]);
 		}
 		resolve();
 
@@ -528,7 +536,7 @@ function sendDefinitionAndDepositToChannel(aa_address, arrDefinition, filling_am
 }
 
 async function setAutoRefill(aa_address, refill_amount, refill_threshold, handle) {
-	const result = await appDB.query("UPDATE channels SET auto_refill_threshold=?,auto_refill_amount=? WHERE aa_address=?", [refill_threshold, refill_amount, aa_address]);
+	const result = await _db.query("UPDATE aa_channels SET auto_refill_threshold=?,auto_refill_amount=? WHERE aa_address=?", [refill_threshold, refill_amount, aa_address]);
 	if (result.affectedRows !== 1)
 		return handle("aa_address not known");
 	else
@@ -536,9 +544,9 @@ async function setAutoRefill(aa_address, refill_amount, refill_threshold, handle
 }
 
 async function getBalancesAndStatus(aa_address, handle) {
-	const rows = await appDB.query("SELECT status,amount_deposited_by_me,amount_spent_by_me, amount_spent_by_peer, (amount_deposited_by_me - amount_spent_by_me + amount_spent_by_peer) AS free_amount,\n\
-	IFNULL((SELECT SUM(amount) FROM my_deposits WHERE my_deposits.aa_address=channels.aa_address AND is_confirmed_by_aa=0),0) AS my_deposits\n\
-	FROM channels WHERE channels.aa_address=?", [aa_address]);
+	const rows = await _db.query("SELECT status,amount_deposited_by_me,amount_spent_by_me, amount_spent_by_peer, (amount_deposited_by_me - amount_spent_by_me + amount_spent_by_peer) AS free_amount,\n\
+	IFNULL((SELECT SUM(amount) FROM aa_my_deposits WHERE aa_my_deposits.aa_address=aa_channels.aa_address AND is_confirmed_by_aa=0),0) AS my_deposits\n\
+	FROM aa_channels WHERE aa_channels.aa_address=?", [aa_address]);
 	if (rows.length === 0)
 		return handle("aa_address not known");
 	else
@@ -561,8 +569,8 @@ function getPaymentPackage(payment_amount, aa_address, handle) {
 		if (!my_address)
 			return unlockAndHandle("not initialized");
 
-		const channels = await appDB.query("SELECT is_peer_ready,status,period,peer_device_address,peer_url,amount_deposited_by_me,amount_spent_by_peer,\n\
-		amount_spent_by_me,is_known_by_peer,salt,timeout,asset FROM channels WHERE aa_address=?", [aa_address]);
+		const channels = await _db.query("SELECT is_peer_ready,status,period,peer_device_address,peer_url,amount_deposited_by_me,amount_spent_by_peer,\n\
+		amount_spent_by_me,is_known_by_peer,salt,timeout,asset FROM aa_channels WHERE aa_address=?", [aa_address]);
 
 		if (channels.length === 0)
 			return unlockAndHandle("AA address not found");
@@ -575,11 +583,11 @@ function getPaymentPackage(payment_amount, aa_address, handle) {
 		if (channel.status == 'closing_initiated_by_peer' || channel.status == 'closing_initiated_by_me' || channel.status == 'closing_initiated_by_me_acknowledged')
 			return unlockAndHandle("closing initiated");
 
-		const unconfirmedClosingUnitsRows = await appDB.query("SELECT 1 FROM unconfirmed_units_from_peer WHERE close_channel=1 AND aa_address=?", [aa_address]);
+		const unconfirmedClosingUnitsRows = await _db.query("SELECT 1 FROM aa_unconfirmed_units_from_peer WHERE close_channel=1 AND aa_address=?", [aa_address]);
 		if (unconfirmedClosingUnitsRows[0])
 			return unlockAndHandle("closing initiated by peer");
 
-		const my_pending_deposits_rows = await appDB.query("SELECT SUM(amount) as total_amount FROM my_deposits WHERE aa_address=? AND is_confirmed_by_aa=0", [aa_address]);
+		const my_pending_deposits_rows = await _db.query("SELECT SUM(amount) as total_amount FROM aa_my_deposits WHERE aa_address=? AND is_confirmed_by_aa=0", [aa_address]);
 		const my_pending_deposits = my_pending_deposits_rows[0] ? my_pending_deposits_rows[0].total_amount : 0;
 		const myFreeAmountOnAA = my_pending_deposits + channel.amount_deposited_by_me - channel.amount_spent_by_me + channel.amount_spent_by_peer;
 
@@ -594,14 +602,14 @@ function getPaymentPackage(payment_amount, aa_address, handle) {
 
 			if (channel.is_peer_ready === 0) {
 				if (await askIfChannelReady(comLayer, peer, aa_address))
-					await appDB.query("UPDATE channels SET is_peer_ready=1,is_known_by_peer=1 WHERE aa_address=?", [aa_address]);
+					await _db.query("UPDATE aa_channels SET is_peer_ready=1,is_known_by_peer=1 WHERE aa_address=?", [aa_address]);
 				else
 					return unlockAndHandle("Channel is not open for peer or he didn't respond");
 			}
 
 		}
 
-		await appDB.query("UPDATE channels SET amount_spent_by_me=amount_spent_by_me+? WHERE aa_address=?", [payment_amount, aa_address]);
+		await _db.query("UPDATE aa_channels SET amount_spent_by_me=amount_spent_by_me+? WHERE aa_address=?", [payment_amount, aa_address]);
 
 		const objPackage = {
 			payment_amount: payment_amount,
@@ -617,7 +625,7 @@ function getPaymentPackage(payment_amount, aa_address, handle) {
 			objPackage.channel_parameters.address = my_address;
 		}
 
-		const my_deposits = await appDB.query("SELECT unit FROM my_deposits WHERE aa_address=?", [aa_address]);
+		const my_deposits = await _db.query("SELECT unit FROM aa_my_deposits WHERE aa_address=?", [aa_address]);
 		if (my_deposits[0] && my_deposits[0].unit)
 			objPackage.last_deposit_unit = my_deposits[0].unit;
 
@@ -648,7 +656,7 @@ function verifyPaymentPackage(objSignedPackage, handle) {
 		if (!validationUtils.isPositiveInteger(objSignedMessage.payment_amount))
 			return handle("payment_amount should be a positive integer");
 
-		const channels = await appDB.query("SELECT peer_address FROM channels WHERE aa_address=?", [objSignedMessage.aa_address]);
+		const channels = await _db.query("SELECT peer_address FROM aa_channels WHERE aa_address=?", [objSignedMessage.aa_address]);
 		if (!channels[0]) { //if channel is not known, we check channel parameters if provided and save channel
 			if (objSignedMessage.channel_parameters) {
 				if (!objSignedPackage.authors || !objSignedPackage.authors[0] || objSignedPackage.authors[0].address != objSignedMessage.channel_parameters.address)
@@ -673,7 +681,7 @@ function verifyPaymentPackage(objSignedPackage, handle) {
 		function verifyPaymentUnderLock() {
 			const payment_amount = objSignedMessage.payment_amount;
 
-			appDB.takeConnectionFromPool(async function (conn) {
+			_db.takeConnectionFromPool(async function (conn) {
 				mutex.lock([objSignedMessage.aa_address], async function (unlock) {
 					async function unlockAndHandle(error, payment_amount, asset, aa_address) {
 						if (conf.isHighAvailabilityNode) {
@@ -690,7 +698,7 @@ function verifyPaymentPackage(objSignedPackage, handle) {
 							return unlockAndHandle("internal error");
 					}
 
-					const channels = await conn.query("SELECT * FROM channels WHERE aa_address=?", [objSignedMessage.aa_address]);
+					const channels = await conn.query("SELECT * FROM aa_channels WHERE aa_address=?", [objSignedMessage.aa_address]);
 					if (channels.length === 0)
 						return unlockAndHandle("aa address not found");
 
@@ -716,7 +724,7 @@ function verifyPaymentPackage(objSignedPackage, handle) {
 						if (payment_amount > (peer_credit + unconfirmed_amount))
 							return unlockAndHandle("Payment amount is over your available credit");
 
-						await conn.query("UPDATE channels SET amount_spent_by_peer=amount_spent_by_peer+?,last_message_from_peer=?,overpayment_from_peer=?,is_known_by_peer=1\n\
+						await conn.query("UPDATE aa_channels SET amount_spent_by_peer=amount_spent_by_peer+?,last_message_from_peer=?,overpayment_from_peer=?,is_known_by_peer=1\n\
 							WHERE aa_address=?", [delta_amount_spent, JSON.stringify(objSignedPackage), peer_credit - payment_amount, channel.aa_address]);
 						return unlockAndHandle(null, payment_amount, channel.asset, channel.aa_address);
 					});

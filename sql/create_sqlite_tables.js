@@ -1,8 +1,9 @@
 /*jslint node: true */
 "use strict";
-const db = require('ocore/db.js');
+const libToES6 = require('../lib/toEs6');
 
-db.query("CREATE TABLE IF NOT EXISTS channels (  \n\
+async function create(){
+	await libToES6.dbQuery("CREATE TABLE IF NOT EXISTS aa_channels (  \n\
 	aa_address CHAR(32) NOT NULL PRIMARY KEY, \n\
 	salt VARCHAR(50) DEFAULT NULL,\n\
 	definition TEXT,\n\
@@ -32,8 +33,7 @@ db.query("CREATE TABLE IF NOT EXISTS channels (  \n\
 	creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,\n\
 	UNIQUE (peer_address, salt)\n\
 );");
-
-db.query("CREATE TABLE IF NOT EXISTS my_deposits (\n\
+	await libToES6.dbQuery("CREATE TABLE IF NOT EXISTS aa_my_deposits (\n\
 	aa_address CHAR(32) NOT NULL, \n\
 	amount INTEGER NOT NULL,\n\
 	unit CHAR(44) NOT NULL,\n\
@@ -41,7 +41,7 @@ db.query("CREATE TABLE IF NOT EXISTS my_deposits (\n\
 	UNIQUE (aa_address, unit)\n\
 );");
 
-db.query("CREATE TABLE IF NOT EXISTS unconfirmed_units_from_peer (\n\
+	await libToES6.dbQuery("CREATE TABLE IF NOT EXISTS aa_unconfirmed_units_from_peer (\n\
 	aa_address CHAR(32) NOT NULL, \n\
 	amount INTEGER DEFAULT 0,\n\
 	unit CHAR(44) NOT NULL,\n\
@@ -52,7 +52,10 @@ db.query("CREATE TABLE IF NOT EXISTS unconfirmed_units_from_peer (\n\
 	UNIQUE(aa_address, unit)\n\
 )");
 
-db.query("CREATE TABLE IF NOT EXISTS channels_config (\n\
+	await libToES6.dbQuery("CREATE TABLE IF NOT EXISTS aa_channels_config (\n\
 	my_address CHAR(32) \n\
 	);");
+}
+
+exports.create = create;
 
