@@ -28,7 +28,7 @@ let _db = {
 let my_address;
 const assocJointsFromPeersCache = {};
 
-eventBus.once('headless_wallet_ready', async () => {
+eventBus.once('biot_ok', async () => {
 	await tables.create();
 	let wallets = await bcore.getWallets();
 	my_address = (await bcore.getAddressesInWallet(wallets[0]))[0];
@@ -189,13 +189,13 @@ function treatNewOutputsToChannels(channels, new_unit) {
 			mutex.lock([channel.aa_address], async function (unlock_aa) {
 				let conn = await take_dbConnectionPromise();
 				let connOr_db = conn;
-				let lockedChannelRows = await connOr_db.query("SELECT * FROM aa_channels WHERE aa_address=?", [channel.aa_address]);
+				let lockedChannelRows = await connOr_db.nQuery("SELECT * FROM aa_channels WHERE aa_address=?", [channel.aa_address]);
 				let lockedChannel = lockedChannelRows[0];
-				let byteAmountRows = await connOr_db.query("SELECT SUM(amount) AS amount FROM outputs WHERE unit=? AND address=? AND asset IS NULL", [new_unit.unit, channel.aa_address]);
+				let byteAmountRows = await connOr_db.nQuery("SELECT SUM(amount) AS amount FROM outputs WHERE unit=? AND address=? AND asset IS NULL", [new_unit.unit, channel.aa_address]);
 				let byteAmount = byteAmountRows[0] ? byteAmountRows[0].amount : 0;
 				if (byteAmount >= constants.MIN_BYTES_BOUNCE_FEE) { // check the minimum to not be bounced is reached
 					let sqlAsset = lockedChannel.asset == 'base' ? "" : " AND asset=" + lockedChannel.asset + " ";
-					let amountRows = await connOr_db.query("SELECT SUM(amount) AS amount  FROM outputs WHERE unit=? AND address=?" + sqlAsset, [new_unit.unit, channel.aa_address]);
+					let amountRows = await connOr_db.nQuery("SELECT SUM(amount) AS amount  FROM outputs WHERE unit=? AND address=?" + sqlAsset, [new_unit.unit, channel.aa_address]);
 					let amount = amountRows[0].amount;
 
 					let bHasDefinition = false;
@@ -212,17 +212,17 @@ function treatNewOutputsToChannels(channels, new_unit) {
 						});
 						// for this 3 statuses, we can take into account unconfirmed deposits since they shouldn't be refused by AA
 						if (lockedChannel.status == "created" || lockedChannel.status == "closed" || lockedChannel.status == "open") {
-							let unconfirmedUnitsRows = await conn.query("SELECT close_channel,has_definition FROM aa_unconfirmed_units_from_peer WHERE aa_address=?", [channel.aa_address]);
+							let unconfirmedUnitsRows = await conn.nQuery("SELECT close_channel,has_definition FROM aa_unconfirmed_units_from_peer WHERE aa_address=?", [channel.aa_address]);
 							let bAlreadyBeenClosed = unconfirmedUnitsRows.some(function (row) {
 								return row.close_channel
 							});
 							if (!bAlreadyBeenClosed && (lockedChannel.is_definition_confirmed === 1 || bHasDefinition)) { // we ignore unit if a closing request happened or no pending/confirmed definition is known
 								let timestamp = Math.round(Date.now() / 1000);
 								if (bHasData) // a deposit shouldn't have data, if it has data we consider it's a closing request and we flag it as so
-									await conn.query("INSERT  " + conn.getIgnore() + " INTO aa_unconfirmed_units_from_peer (aa_address,close_channel,unit,timestamp) VALUES (?,1,?,?)",
+									await conn.nQuery("INSERT  " + conn.getIgnore() + " INTO aa_unconfirmed_units_from_peer (aa_address,close_channel,unit,timestamp) VALUES (?,1,?,?)",
 										[channel.aa_address, new_unit.unit, timestamp]);
 								else if (lockedChannel.asset != 'base' || byteAmount > 10000) // deposit in bytes are possible only over 10000
-									await conn.query("INSERT  " + conn.getIgnore() + " INTO aa_unconfirmed_units_from_peer (aa_address,amount,unit,has_definition,timestamp) VALUES (?,?,?,?,?)",
+									await conn.nQuery("INSERT  " + conn.getIgnore() + " INTO aa_unconfirmed_units_from_peer (aa_address,amount,unit,has_definition,timestamp) VALUES (?,?,?,?,?)",
 										[channel.aa_address, amount, new_unit.unit, bHasDefinition ? 1 : 0, timestamp]);
 							}
 						}
@@ -265,9 +265,14 @@ function getJointFromCacheStorageOrHub(conn, unit) {
 }
 
 function take_dbConnectionPromise() {
-	return new Promise(async (resolve) => {
-		_db.takeConnectionFromPool(function (conn) {
-			resolve(conn);
+	return new Promise( (resolve) => {
+		db.takeConnectionFromPool(function (_conn) {
+			_conn.nQuery = (query, params = []) => {
+				return new Promise(resolve1 => {
+					_conn.query(query, params, resolve1);
+				})
+			};
+			resolve(_conn);
 		});
 	});
 }
@@ -304,12 +309,12 @@ function treatStableUnitFromAA(new_unit) {
 		mutex.lock([new_unit.author_address], async function (unlock_aa) {
 			let connOr_db = await take_dbConnectionPromise();
 
-			let channels = await connOr_db.query("SELECT * FROM aa_channels WHERE aa_address=?", [new_unit.author_address]);
+			let channels = await connOr_db.nQuery("SELECT * FROM aa_channels WHERE aa_address=?", [new_unit.author_address]);
 			if (!channels[0])
 				throw Error("channel not found");
 			let channel = channels[0];
 
-			let payloads = await connOr_db.query("SELECT payload FROM messages WHERE unit=? AND app='data' ORDER BY message_index ASC LIMIT 1", [new_unit.unit]);
+			let payloads = await connOr_db.nQuery("SELECT payload FROM messages WHERE unit=? AND app='data' ORDER BY message_index ASC LIMIT 1", [new_unit.unit]);
 			let payload = payloads[0] ? JSON.parse(payloads[0].payload) : null;
 
 			function setLastUpdatedMciAndEventIdAndOtherFields(fields) {
@@ -319,19 +324,19 @@ function treatStableUnitFromAA(new_unit) {
 						for (let key in fields) {
 							strSetFields += "," + key + "='" + fields[key] + "'";
 						}
-					await connOr_db.query("UPDATE aa_channels SET last_updated_mci=?,last_event_id=?,is_definition_confirmed=1" + strSetFields + " WHERE aa_address=? AND last_event_id<?", [new_unit.main_chain_index, payload.event_id, new_unit.author_address, payload.event_id]);
+					await connOr_db.nQuery("UPDATE aa_channels SET last_updated_mci=?,last_event_id=?,is_definition_confirmed=1" + strSetFields + " WHERE aa_address=? AND last_event_id<?", [new_unit.main_chain_index, payload.event_id, new_unit.author_address, payload.event_id]);
 					return resolve_2();
 				});
 			}
 
 			//once AA state is updated by an unit, we delete the corresponding unit from unconfirmed units table
 			if (payload && payload.trigger_unit) {
-				await connOr_db.query("DELETE FROM aa_unconfirmed_units_from_peer WHERE unit=?", [payload.trigger_unit]);
+				await connOr_db.nQuery("DELETE FROM aa_unconfirmed_units_from_peer WHERE unit=?", [payload.trigger_unit]);
 				delete assocJointsFromPeersCache[payload.trigger_unit];
 			}
 			//channel is open and received funding
 			if (payload && payload.open) {
-				await connOr_db.query("UPDATE aa_my_deposits SET is_confirmed_by_aa=1 WHERE unit=?", [payload.trigger_unit]);
+				await connOr_db.nQuery("UPDATE aa_my_deposits SET is_confirmed_by_aa=1 WHERE unit=?", [payload.trigger_unit]);
 				await setLastUpdatedMciAndEventIdAndOtherFields({
 					status: "open",
 					period: payload.period,

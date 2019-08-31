@@ -237,7 +237,7 @@ async function close(aa_address, handle) {
 			payload_hash: objectHash.getBase64Hash(payload),
 			payload: payload
 		}],
-		change_address: await bcore.createNewAddress(wallets[0]),
+		change_address: my_address,
 		base_outputs: [{address: aa_address, amount: 10000}],
 		spend_unconfirmed: 'all'
 	}
@@ -273,7 +273,7 @@ function deposit(aa_address, amount, handle) {
 		let wallets = await bcore.getWallets();
 		const options = {
 			asset: channel.asset,
-			change_address: await bcore.createNewAddress(wallets[0]),
+			change_address: my_address,
 			spend_unconfirmed: 'all'
 		}
 
@@ -486,8 +486,6 @@ function sendRequestToPeer(comLayer, peer, objToBeSent, responseCb, timeOutCb) {
 	assocResponseByTag[tag] = responseCb;
 	objToBeSent.tag = tag;
 	if (comLayer == "obyte-messenger") {
-		if (conf.isHighAvailabilityNode)
-			throw Error("obyte messenger no available in high avaibility mode");
 		const device = require('ocore/device.js');
 		device.sendMessageToDevice(peer, 'object', objToBeSent);
 	}
@@ -577,8 +575,6 @@ function getPaymentPackage(payment_amount, aa_address, handle) {
 
 		const channel = channels[0];
 
-		if (channel.peer_device_address && conf.isHighAvailabilityNode)
-			return unlockAndHandle("device address cannot be used in high availability mode");
 
 		if (channel.status == 'closing_initiated_by_peer' || channel.status == 'closing_initiated_by_me' || channel.status == 'closing_initiated_by_me_acknowledged')
 			return unlockAndHandle("closing initiated");
@@ -624,10 +620,6 @@ function getPaymentPackage(payment_amount, aa_address, handle) {
 			objPackage.channel_parameters.salt = channel.salt;
 			objPackage.channel_parameters.address = my_address;
 		}
-
-		const my_deposits = await _db.query("SELECT unit FROM aa_my_deposits WHERE aa_address=?", [aa_address]);
-		if (my_deposits[0] && my_deposits[0].unit)
-			objPackage.last_deposit_unit = my_deposits[0].unit;
 
 		const objSignedPackage = await signMessage(objPackage, my_address);
 
@@ -681,24 +673,20 @@ function verifyPaymentPackage(objSignedPackage, handle) {
 		function verifyPaymentUnderLock() {
 			const payment_amount = objSignedMessage.payment_amount;
 
-			_db.takeConnectionFromPool(async function (conn) {
+			db.takeConnectionFromPool(async function (conn) {
+				conn.nQuery = (query, params = []) => {
+					return new Promise(resolve1 => {
+						conn.query(query, params, resolve1);
+					})
+				};
 				mutex.lock([objSignedMessage.aa_address], async function (unlock) {
 					async function unlockAndHandle(error, payment_amount, asset, aa_address) {
-						if (conf.isHighAvailabilityNode) {
-							await conn.query("DO RELEASE_LOCK(?)", [objSignedMessage.aa_address]);
-						}
 						unlock();
 						conn.release();
 						handle(error, payment_amount, asset, aa_address);
 					}
 
-					if (conf.isHighAvailabilityNode) {
-						const lockRows = await conn.query("SELECT GET_LOCK(?,1) as my_lock", [objSignedMessage.aa_address]);
-						if (!lockRows[0].my_lock || lockRows[0].my_lock === 0)
-							return unlockAndHandle("internal error");
-					}
-
-					const channels = await conn.query("SELECT * FROM aa_channels WHERE aa_address=?", [objSignedMessage.aa_address]);
+					const channels = await conn.nQuery("SELECT * FROM aa_channels WHERE aa_address=?", [objSignedMessage.aa_address]);
 					if (channels.length === 0)
 						return unlockAndHandle("aa address not found");
 
@@ -724,7 +712,7 @@ function verifyPaymentPackage(objSignedPackage, handle) {
 						if (payment_amount > (peer_credit + unconfirmed_amount))
 							return unlockAndHandle("Payment amount is over your available credit");
 
-						await conn.query("UPDATE aa_channels SET amount_spent_by_peer=amount_spent_by_peer+?,last_message_from_peer=?,overpayment_from_peer=?,is_known_by_peer=1\n\
+						await conn.nQuery("UPDATE aa_channels SET amount_spent_by_peer=amount_spent_by_peer+?,last_message_from_peer=?,overpayment_from_peer=?,is_known_by_peer=1\n\
 							WHERE aa_address=?", [delta_amount_spent, JSON.stringify(objSignedPackage), peer_credit - payment_amount, channel.aa_address]);
 						return unlockAndHandle(null, payment_amount, channel.asset, channel.aa_address);
 					});

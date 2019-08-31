@@ -92,7 +92,7 @@ return 	['autonomous agent', {
 					if ($transferredFromMe < 0)
 								bounce('bad amount spent by me: ' || $transferredFromMe);
 					if (trigger.data.sentByPeer){
-						if (trigger.data.sentByPeer.signed_message.channel != this_address)
+						if (trigger.data.sentByPeer.signed_message.aa_address  != this_address)
 							bounce('signed for another channel');
 						if (trigger.data.sentByPeer.signed_message.period != var['period'])
 							bounce('signed for a different period of this channel');
@@ -213,7 +213,7 @@ return 	['autonomous agent', {
 				if: `{ trigger.data.fraud_proof AND var['close_initiated_by'] AND trigger.data.sentByPeer }`,
 				init: `{
 					$bInitiatedByA = (var['close_initiated_by'] == 'A');
-					if (trigger.data.sentByPeer.signed_message.channel != this_address)
+					if (trigger.data.sentByPeer.signed_message.aa_address  != this_address)
 						bounce('signed for another channel');
 					if (trigger.data.sentByPeer.signed_message.period != var['period'])
 						bounce('signed for a different period of this channel');
