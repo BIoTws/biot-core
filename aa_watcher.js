@@ -194,7 +194,7 @@ function treatNewOutputsToChannels(channels, new_unit) {
 				let byteAmountRows = await connOr_db.nQuery("SELECT SUM(amount) AS amount FROM outputs WHERE unit=? AND address=? AND asset IS NULL", [new_unit.unit, channel.aa_address]);
 				let byteAmount = byteAmountRows[0] ? byteAmountRows[0].amount : 0;
 				if (byteAmount >= constants.MIN_BYTES_BOUNCE_FEE) { // check the minimum to not be bounced is reached
-					let sqlAsset = lockedChannel.asset == 'base' ? "" : " AND asset=" + lockedChannel.asset + " ";
+					let sqlAsset = lockedChannel.asset == 'base' ? "" : " AND asset=\"" + lockedChannel.asset + "\" ";
 					let amountRows = await connOr_db.nQuery("SELECT SUM(amount) AS amount  FROM outputs WHERE unit=? AND address=?" + sqlAsset, [new_unit.unit, channel.aa_address]);
 					let amount = amountRows[0].amount;
 
@@ -282,17 +282,14 @@ function treatStableUnitsFromAA(arrUnits) {
 		mutex.lock(['treatStableUnitsFromAA'], async (unlock) => {
 			const unitFilter = arrUnits ? " units.unit IN(" + arrUnits.map(_db.escape).join(',') + ") AND " : "";
 			const isStableFilter = conf.bLight ? " AND is_stable=1 AND sequence='good' " : ""; // unit from AA from can always be considered as stable on full node
-
 			const new_units = await _db.query("SELECT timestamp,units.unit,main_chain_index,unit_authors.address AS author_address FROM units \n\
 			CROSS JOIN unit_authors USING(unit)\n\
 			WHERE " + unitFilter + await getSqlFilterForNewUnitsFromChannels() + isStableFilter + " GROUP BY units.unit ORDER BY main_chain_index,level ASC");
-
 			if (new_units.length === 0) {
 				unlock();
 				resolve_1();
 				return console.log("nothing concerns payment channel in these units");
 			}
-
 			for (let i = 0; i < new_units.length; i++) {
 				let new_unit = new_units[i];
 				await treatStableUnitFromAA(new_unit);
@@ -308,7 +305,6 @@ function treatStableUnitFromAA(new_unit) {
 	return new Promise(async (resolve) => {
 		mutex.lock([new_unit.author_address], async function (unlock_aa) {
 			let connOr_db = await take_dbConnectionPromise();
-
 			let channels = await connOr_db.nQuery("SELECT * FROM aa_channels WHERE aa_address=?", [new_unit.author_address]);
 			if (!channels[0])
 				throw Error("channel not found");
@@ -316,7 +312,6 @@ function treatStableUnitFromAA(new_unit) {
 
 			let payloads = await connOr_db.nQuery("SELECT payload FROM messages WHERE unit=? AND app='data' ORDER BY message_index ASC LIMIT 1", [new_unit.unit]);
 			let payload = payloads[0] ? JSON.parse(payloads[0].payload) : null;
-
 			function setLastUpdatedMciAndEventIdAndOtherFields(fields) {
 				return new Promise(async (resolve_2) => {
 					let strSetFields = "";
@@ -348,7 +343,6 @@ function treatStableUnitFromAA(new_unit) {
 				else
 					eventBus.emit("peer_deposit_became_stable", payload[channel.peer_address], payload.trigger_unit);
 			}
-
 			//closing requested by one party
 			if (payload && payload.closing) {
 				let status;
@@ -383,7 +377,7 @@ function treatStableUnitFromAA(new_unit) {
 						amount_possibly_lost_by_me: 0,
 						last_message_from_peer: ''
 					});
-				const rows = await _db.query("SELECT SUM(amount) AS amount FROM outputs WHERE unit=? AND address=?", [new_unit.unit, my_address]);
+				const rows = await connOr_db.nQuery("SELECT SUM(amount) AS amount FROM outputs WHERE unit=? AND address=?", [new_unit.unit, my_address]);
 				if (payload.fraud_proof)
 					eventBus.emit("channel_closed_with_fraud_proof", new_unit.author_address, rows[0] ? rows[0].amount : 0);
 				else
@@ -391,7 +385,7 @@ function treatStableUnitFromAA(new_unit) {
 			}
 			//AA refused a deposit, we still have to update flag in my_deposits table so it's not considered as pending anymore
 			if (payload && payload.refused) {
-				const result = await _db.query("UPDATE aa_my_deposits SET is_confirmed_by_aa=1 WHERE unit=?", [payload.trigger_unit]);
+				const result = await connOr_db.nQuery("UPDATE aa_my_deposits SET is_confirmed_by_aa=1 WHERE unit=?", [payload.trigger_unit]);
 				if (result.affectedRows !== 0)
 					eventBus.emit("refused_deposit", payload.trigger_unit);
 				await setLastUpdatedMciAndEventIdAndOtherFields({});
