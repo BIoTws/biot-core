@@ -569,7 +569,7 @@ function postPublicProfile(user_address, profile) {
 					ifError: console.error,
 					ifOk: function (objJoint) {
 						network.broadcastJoint(objJoint);
-						return resolve({objJoint, src_profile, address: my_address});
+						return resolve({objJoint, address: my_address});
 					}
 				})
 			};

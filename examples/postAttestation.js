@@ -5,8 +5,8 @@ async function start() {
 	let wallets = await core.getWallets();
 	let addresses = await core.getAddressesInWallet(wallets[0]);
 	
-	let profile = {name: 'test name', lname: 'test lname', age: 22};
-	let result = await core.postPrivateProfile(addresses[0], profile);
+	let profile = {type:'printer'};
+	let result = await core.postPublicProfile(addresses[0], profile);
 	console.error('result', result);
 	console.error('-------________-------');
 	console.error(JSON.stringify(result));
