@@ -22,7 +22,9 @@ const protocolVersion = '0.1';
 
 let xPrivKey;
 
-process.on('unhandledRejection', up => { throw up; });
+process.on('unhandledRejection', up => {
+	throw up;
+});
 
 function replaceConsoleLog() {
 	if (global.window && window.cordova) return;
@@ -69,34 +71,34 @@ exports.init = async (passphrase) => {
 	let saveTempKeys = (new_temp_key, new_prev_temp_key, onDone) => {
 		libKeys.writeKeys(keys.mnemonic_phrase, new_temp_key, new_prev_temp_key, onDone).catch(Promise.reject);
 	};
-	
+
 	let mnemonic = new Mnemonic(keys.mnemonic_phrase);
 	xPrivKey = mnemonic.toHDPrivateKey(passphrase);
 	libKeys.setXPrivKey(xPrivKey);
-	
+
 	let devicePrivKey = xPrivKey.derive("m/1'").privateKey.bn.toBuffer({size: 32});
-	
+
 	let device = require('ocore/device');
 	device.setDevicePrivateKey(devicePrivKey);
 	let my_device_address = device.getMyDeviceAddress();
-	
+
 	let rows = await toEs6.dbQuery("SELECT 1 FROM extended_pubkeys WHERE device_address=?", [my_device_address]);
-	
+
 	if (rows.length === 0) {
 		console.log('passphrase is incorrect');
 		return false;
 	}
-	
+
 	if (conf.permanent_pairing_secret)
 		db.query(
 			"INSERT " + db.getIgnore() + " INTO pairing_secrets (pairing_secret, is_permanent, expiry_date) VALUES (?, 1, '2038-01-01')",
 			[conf.permanent_pairing_secret]
 		);
-	
+
 	device.setTempKeys(keys.deviceTempPrivKey, keys.devicePrevTempPrivKey, saveTempKeys);
 	device.setDeviceName(deviceName);
 	device.setDeviceHub(conf.hub);
-	
+
 	let my_device_pubkey = device.getMyDevicePubKey();
 	console.log("====== my device address: " + my_device_address);
 	console.log("====== my device pubkey: " + my_device_pubkey);
@@ -108,11 +110,11 @@ exports.init = async (passphrase) => {
 	}
 	await libSqliteMigrations.migrateDb();
 	eventBus.emit('headless_wallet_ready');
-	
+
 	if (!process.env.DEBUG) {
 		replaceConsoleLog();
 	}
-	
+
 	return keys.mnemonic_phrase;
 };
 
@@ -372,7 +374,7 @@ function signDevicePrivateKey(hash) {
 	let buffer = Buffer.from(hash);
 	let device = require('ocore/device');
 	let devicePrivKey = xPrivKey.derive("m/1'").privateKey.bn.toBuffer({size: 32});
-	
+
 	return {sign: ecdsaSig.sign(buffer, devicePrivKey), pub_b64: device.getMyDevicePubKey()};
 }
 
@@ -455,7 +457,7 @@ function postDataFeed(objDataFeed) {
 			const wallets = await getWallets();
 			const addresses = await getAddressesInWallet(wallets[0]);
 			const my_address = addresses[0];
-			
+
 			let params = {
 				paying_addresses: [my_address],
 				outputs: [{address: my_address, amount: 0}],
@@ -492,7 +494,7 @@ function postPrivateProfile(user_address, profile) {
 			const wallets = await getWallets();
 			const addresses = await getAddressesInWallet(wallets[0]);
 			const my_address = addresses[0];
-			
+
 			let src_profile = {};
 			let hidden_profile = {};
 			for (let field in profile) {
@@ -502,17 +504,17 @@ function postPrivateProfile(user_address, profile) {
 				src_profile[field] = [value, blinding];
 			}
 			let profile_hash = objectHash.getBase64Hash(hidden_profile);
-			
+
 			let privProfile = {
 				profile_hash: profile_hash,
 				user_id: objectHash.getBase64Hash([profile, conf.salt || ''])
 			};
-			
+
 			let payload = {
 				address: user_address,
 				profile: privProfile
 			};
-			
+
 			let params = {
 				paying_addresses: [my_address],
 				outputs: [{address: my_address, amount: 0}],
@@ -527,7 +529,51 @@ function postPrivateProfile(user_address, profile) {
 					}
 				})
 			};
-			
+
+			console.error('payload', payload);
+			let objMessage = {
+				app: "attestation",
+				payload_location: "inline",
+				payload_hash: objectHash.getBase64Hash(payload),
+				payload: payload
+			};
+			params.messages = [objMessage];
+			composer.composeJoint(params);
+		})();
+	});
+}
+
+function postPublicProfile(user_address, profile) {
+	return new Promise(resolve => {
+		(async () => {
+			const network = require('ocore/network.js');
+			const composer = require('ocore/composer.js');
+			const objectHash = require('ocore/object_hash.js');
+			const wallet = require('ocore/wallet.js');
+			const wallets = await getWallets();
+			const addresses = await getAddressesInWallet(wallets[0]);
+			const my_address = addresses[0];
+
+			let payload = {
+				address: user_address,
+				profile: profile
+			};
+
+			let params = {
+				paying_addresses: [my_address],
+				outputs: [{address: my_address, amount: 0}],
+				signer: wallet.getSigner({}, addresses, libKeys.signWithLocalPrivateKey),
+				spend_unconfirmed: 'all',
+				callbacks: composer.getSavingCallbacks({
+					ifNotEnoughFunds: console.error,
+					ifError: console.error,
+					ifOk: function (objJoint) {
+						network.broadcastJoint(objJoint);
+						return resolve({objJoint, src_profile, address: my_address});
+					}
+				})
+			};
+
 			console.error('payload', payload);
 			let objMessage = {
 				app: "attestation",
@@ -572,6 +618,7 @@ exports.listCorrespondents = listCorrespondents;
 exports.getMyParingCode = getMyParingCode;
 exports.postDataFeed = postDataFeed;
 exports.postPrivateProfile = postPrivateProfile;
+exports.postPublicProfile = postPublicProfile;
 exports.saveProfile = saveProfile;
 exports.getProfiles = getProfiles;
 exports.setDeviceName = setDeviceName;
