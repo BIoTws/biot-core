@@ -123,16 +123,13 @@ async function treatIncomingRequest(objRequest, handle) {
 
 
 async function getUnconfirmedSpendableAmountForChannel(conn, objChannel, aa_address, handle) {
-
-	const maxValidTimestamp = conf.unconfirmedAmountsLimitsByAssetOrChannel && conf.unconfirmedAmountsLimitsByAssetOrChannel[objChannel.asset].minimum_time_in_second ?
-		Date.now() / 1000 - conf.unconfirmedAmountsLimitsByAssetOrChannel[objChannel.asset].minimum_time_in_second : 0;
 	const unconfirmedUnitsRows = await conn.query("SELECT SUM(amount) AS amount,close_channel,has_definition,is_bad_sequence,timestamp \n\
 	FROM aa_unconfirmed_units_from_peer WHERE aa_address=?", [aa_address]);
 	const bHasBeenClosed = unconfirmedUnitsRows.some(function (row) {
 		return row.close_channel === 1
 	});
 	const bHasDefinition = unconfirmedUnitsRows.some(function (row) {
-		return row.timestamp < maxValidTimestamp && row.has_definition === 1
+		return row.has_definition === 1
 	}) || objChannel.is_definition_confirmed === 1;
 	const bHasBadSequence = unconfirmedUnitsRows.some(function (row) {
 		return row.is_bad_sequence === 1
@@ -147,9 +144,8 @@ async function getUnconfirmedSpendableAmountForChannel(conn, objChannel, aa_addr
 
 	let unconfirmedDeposit = 0;
 	unconfirmedUnitsRows.forEach(function (row) {
-		if (row.timestamp < maxValidTimestamp)
-			unconfirmedDeposit += row.amount;
-	})
+		unconfirmedDeposit += row.amount;
+	});
 
 
 	const unconfirmedSpentByAssetRows = await conn.query("SELECT amount_spent_by_peer - amount_deposited_by_peer - amount_spent_by_me AS amount FROM aa_channels WHERE asset=?", [objChannel.asset]);
@@ -330,7 +326,7 @@ async function getChannelsForPeer(peer, asset, handle) {
 		const peer_device_address = await correspondents.findCorrespondentByPairingCode(peer);
 		if (!peer_device_address)
 			return handle("no peer known with this pairing code");
-		const rows = await appDB.query("SELECT aa_address FROM channels WHERE peer_device_address=? AND asset=?", [peer_device_address, asset]);
+		const rows = await appDB.query("SELECT aa_address FROM aa_channels WHERE peer_device_address=? AND asset=?", [peer_device_address, asset]);
 		if (rows.length === 0)
 			return handle("no channel opened with this pairing code for this asset");
 		return handle(null, rows.map(function (row) {
@@ -338,14 +334,14 @@ async function getChannelsForPeer(peer, asset, handle) {
 		}));
 	} else if (isUrl(peer)) { // it's an URL
 		const peer_url = peer.substr(-1) == "/" ? peer : peer + "/";
-		const rows = await appDB.query("SELECT aa_address FROM channels WHERE peer_url=? AND asset=?", [peer_url, asset]);
+		const rows = await appDB.query("SELECT aa_address FROM aa_channels WHERE peer_url=? AND asset=?", [peer_url, asset]);
 		if (rows.length === 0)
 			return handle("no channel opened with this peer url for this asset");
 		return handle(null, rows.map(function (row) {
 			return row.aa_address
 		}));
 	} else if (validationUtils.isValidAddress(peer)) {
-		const rows = await appDB.query("SELECT aa_address FROM channels WHERE peer_address=? AND asset=?", [peer, asset]);
+		const rows = await appDB.query("SELECT aa_address FROM aa_channels WHERE peer_address=? AND asset=?", [peer, asset]);
 		if (rows.length === 0)
 			return handle("no channel opened with this peer address for this asset");
 		return handle(null, rows.map(function (row) {
@@ -471,7 +467,7 @@ async function createChannelAndSendDefinitionAndDeposit(initial_amount, arrDefin
 		sendDefinitionAndDepositToChannel(aa_address, arrDefinition, initial_amount, asset).then(() => {
 			return handle(null, aa_address);
 		}, async (error) => {
-			await _db.query("DELETE FROM channels WHERE aa_address=?", [aa_address]);
+			await _db.query("DELETE FROM aa_channels WHERE aa_address=?", [aa_address]);
 			return handle(error);
 		});
 	}

@@ -62,7 +62,7 @@ eventBus.on('new_my_transactions', function (arrUnits) {
 });
 
 eventBus.on('sequence_became_bad', function (arrUnits) {
-	appDB.query("UPDATE unconfirmed_units_from_peer SET is_bad_sequence=1 WHERE unit IN(?)", [arrUnits]);
+	appDB.query("UPDATE aa_unconfirmed_units_from_peer SET is_bad_sequence=1 WHERE unit IN(?)", [arrUnits]);
 });
 
 
@@ -297,7 +297,7 @@ async function updateLastMci(arrUnits) {
 		var payloads = await dagDB.query("SELECT payload FROM messages WHERE unit=? AND app='data' ORDER BY message_index ASC LIMIT 1", [stable_unit.unit]);
 		var payload = payloads[0] ? JSON.parse(payloads[0].payload) : {};
 		if (payload.event_id)
-			await appDB.query("UPDATE channels SET last_updated_mci=? WHERE last_event_id>=? AND aa_address=?",
+			await appDB.query("UPDATE aa_channels SET last_updated_mci=? WHERE last_event_id>=? AND aa_address=?",
 				[stable_unit.main_chain_index, payload.event_id, stable_unit.author_address])
 	}
 }
@@ -347,7 +347,7 @@ function treatUnitFromAA(new_unit) {
 						for (let key in fields) {
 							strSetFields += "," + key + "='" + fields[key] + "'";
 						}
-					await connOr_db.nQuery("UPDATE channels SET last_updated_mci=?,last_event_id=?,is_definition_confirmed=1" + strSetFields + "\n\
+					await connOr_db.nQuery("UPDATE aa_channels SET last_updated_mci=?,last_event_id=?,is_definition_confirmed=1" + strSetFields + "\n\
 					WHERE aa_address=? AND last_event_id<?", [new_unit.main_chain_index ? new_unit.main_chain_index : channel.last_updated_mci, payload.event_id, new_unit.author_address, payload.event_id]);
 					return resolve_2();
 				});
@@ -458,8 +458,8 @@ function treatClosingRequests() {
 				if (error)
 					console.error("error when closing channel " + error);
 				else {
-					await _db.query("UPDATE channels SET closing_authored=0 WHERE aa_address=?", [row.aa_address]);
-					await _db.query("UPDATE channels SET status='closing_initiated_by_me' WHERE aa_address=? AND (status='open' OR status='created')", [row.aa_address]);
+					await _db.query("UPDATE aa_channels SET closing_authored=0 WHERE aa_address=?", [row.aa_address]);
+					await _db.query("UPDATE aa_channels SET status='closing_initiated_by_me' WHERE aa_address=? AND (status='open' OR status='created')", [row.aa_address]);
 				}
 				cb();
 			},
