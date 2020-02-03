@@ -56,6 +56,7 @@ async function init() {
 			return device.sendMessageToDevice(from_address, 'object', objResponse);
 		});
 	});
+	eventBus.emit('channels_init');
 }
 
 
